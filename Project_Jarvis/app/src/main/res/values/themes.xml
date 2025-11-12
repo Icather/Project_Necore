@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. -->
+    <style name="Theme.Project_Jarvis.App" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/light_blue_accent</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/light_blue_accent</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <!-- Background and surface colors. -->
+        <item name="android:colorBackground">@color/light_background</item>
+        <item name="colorSurface">@color/light_surface</item>
+        <item name="colorOnBackground">@color/light_text_primary</item>
+        <item name="colorOnSurface">@color/light_text_primary</item>
+        <!-- Text colors. -->
+        <item name="android:textColorPrimary">@color/light_text_primary</item>
+        <item name="android:textColorSecondary">@color/light_text_secondary</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">@color/light_background</item>
+        <!-- Popup Menu Style -->
+        <item name="popupMenuStyle">@style/Widget.App.PopupMenu</item>
+    </style>
+
+    <style name="Widget.App.PopupMenu" parent="Widget.Material3.PopupMenu.ListPopupWindow">
+        <item name="android:popupBackground">@drawable/bg_popup_menu</item>
+    </style>
+</resources>

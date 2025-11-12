@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Light Theme Colors -->
+    <color name="light_blue_accent">#FF0091EA</color> <!-- Vibrant Blue for accents -->
+    <color name="light_text_primary">#DE000000</color> <!-- 87% Black for primary text -->
+    <color name="light_text_secondary">#8A000000</color> <!-- 54% Black for secondary text -->
+    <color name="light_background">#FFFFFFFF</color> <!-- White background -->
+    <color name="light_surface">#FFF5F5F5</color> <!-- Light gray for surfaces like cards or dialogs -->
+    <color name="grey_500">#9E9E9E</color>
+</resources>

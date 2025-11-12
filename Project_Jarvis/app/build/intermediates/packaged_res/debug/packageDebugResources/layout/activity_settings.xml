@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:divider="?android:attr/listDivider"
+    android:showDividers="middle">
+
+    <TextView
+        android:id="@+id/apiConfig"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/api_configuration"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:padding="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground"/>
+
+    <TextView
+        android:id="@+id/exportApiConfigs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/export_api_configs"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:padding="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground"/>
+
+    <TextView
+        android:id="@+id/importApiConfigs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/import_api_configs"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:padding="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?android:attr/selectableItemBackground"/>
+
+</LinearLayout>

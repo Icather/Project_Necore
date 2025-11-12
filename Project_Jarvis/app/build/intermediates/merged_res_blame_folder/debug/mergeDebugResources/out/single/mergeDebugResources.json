@@ -1,0 +1,194 @@
+[
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_activity_chat.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/activity_chat.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_bottom_sheet_model_selector.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/bottom_sheet_model_selector.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-hdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_bg_input_text.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/bg_input_text.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_list_item_api_config.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/list_item_api_config.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_item_history.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/item_history.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_ic_add_circle_outline.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/ic_add_circle_outline.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/xml_data_extraction_rules.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_bg_model_selector.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/bg_model_selector.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-xxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_activity_error.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/activity_error.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_list_item_chat_user.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/list_item_chat_user.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_spinner_dropdown_item_layout.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/spinner_dropdown_item_layout.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-hdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_ic_send_arrow.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/ic_send_arrow.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_ic_back.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/ic_back.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_item_chat_ai.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/item_chat_ai.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_bg_send_button.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/bg_send_button.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_ic_history.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/ic_history.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-xxxhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_bg_chat_user.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/bg_chat_user.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-xxxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_spinner_item_layout.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/spinner_item_layout.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_ic_send.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/ic_send.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-xhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_item_chat_user.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/item_chat_user.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/xml_backup_rules.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_activity_new_api.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/activity_new_api.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_ic_menu.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/ic_menu.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/menu_navigation_menu.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/menu/navigation_menu.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/menu_history_menu.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/menu/history_menu.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_list_item_chat_ai.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/list_item_chat_ai.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/menu_main_menu.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/menu/main_menu.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-xxhdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-mdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_activity_api_config.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/activity_api_config.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable-anydpi-v24_ic_launcher_foreground.xml.flat",
+        "source": "icather.pages.dev.app-pngs-47:/drawable-anydpi-v24/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_activity_settings.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/activity_settings.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_activity_history.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/activity_history.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_bg_popup_menu.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/bg_popup_menu.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_ic_launcher_background.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-xhdpi/ic_launcher_round.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/layout_item_attachment_preview.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/layout/item_attachment_preview.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "icather.pages.dev.app-main-53:/mipmap-mdpi/ic_launcher.webp"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_bg_rounded_corners.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/bg_rounded_corners.xml"
+    },
+    {
+        "merged": "icather.pages.dev.app-debug-51:/drawable_bg_chat_ai.xml.flat",
+        "source": "icather.pages.dev.app-main-53:/drawable/bg_chat_ai.xml"
+    }
+]

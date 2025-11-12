@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="add_new_api_config">添加新的API配置</string>
+    <string name="api_configuration">API 配置</string>
+    <string name="api_key">API 密钥</string>
+    <string name="api_key_display">API密钥</string>
+    <string name="api_key_not_set">API 密钥未设置，请在设置中配置。</string>
+    <string name="api_name">名称</string>
+    <string name="api_saved">API 已保存</string>
+    <string name="app_name">AI 助理</string>
+    <string name="cancel">取消</string>
+    <string name="chat_history">聊天记录</string>
+    <string name="clear_history">清除历史记录</string>
+    <string name="copied_to_clipboard">已复制到剪贴板</string>
+    <string name="copy_error">复制错误</string>
+    <string name="delete">删除</string>
+    <string name="delete_api_config_message">您确定要删除此API配置吗？</string>
+    <string name="delete_api_config_title">删除API配置</string>
+    <string name="error">发生错误：%s</string>
+    <string name="error_occurred">发生错误</string>
+    <string name="export_api_configs">导出API配置</string>
+    <string name="history">历史记录</string>
+    <string name="import_api_configs">导入API配置</string>
+    <string name="name_and_key_cannot_be_empty">名称和密钥不能为空</string>
+    <string name="network_error">网络错误：%s</string>
+    <string name="new_chat">新的聊天</string>
+    <string name="not_set">未设置</string>
+    <string name="please_attach_image_for_ocr">请为 OCR 模型附加一张图片</string>
+    <string name="provider">提供商</string>
+    <string name="remove_attachment">删除附件</string>
+    <string name="save">保存</string>
+    <string name="select_a_model">选择一个模型</string>
+    <string name="send">发送</string>
+    <string name="settings">设置</string>
+    <string name="type">类型</string>
+    <string name="type_a_message">输入消息...</string>
+    <string name="upload_file">上传文件</string>
+    <string name="upload_image">上传图片</string>
+    <string name="using_built_in_key">使用内置密钥</string>
+</resources>

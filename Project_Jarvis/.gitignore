@@ -1,0 +1,56 @@
+# Android Studio generated files
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Local configuration file
+local.properties
+
+# Environment variables
+.env
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services file
+google-services.json
+
+# Log files
+*.log
+
+# Gradle cache
+.gradle/
+
+# Android Studio profiling data
+*.hprof
+
+# Generated APKs, AABs, and other release artifacts
+*.apk
+*.aab
+/app/release/
+/app/build/outputs/
+
+# Specific Android Studio files to ignore
+.idea/deployment.xml
+.idea/libraries/
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/gradle.xml
+.idea/compiler.xml
+.idea/jarRepositories.xml
+
+# Emulator state
+.android/
