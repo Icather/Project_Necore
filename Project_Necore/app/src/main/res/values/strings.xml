@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Mecore</string>
+    <string name="app_name">Necore</string>
     <string name="type_a_message">Type a message...</string>
     <string name="upload_image">Upload Image</string>
     <string name="upload_file">Upload File</string>

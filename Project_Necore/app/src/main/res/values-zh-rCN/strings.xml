@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Mecore</string>
+    <string name="app_name">Necore</string>
     <string name="type_a_message">输入消息...</string>
     <string name="upload_image">上传图片</string>
     <string name="upload_file">上传文件</string>
