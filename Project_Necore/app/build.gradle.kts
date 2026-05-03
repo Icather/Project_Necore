@@ -23,6 +23,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "version"
+
+    productFlavors {
+        create("pure") {
+            dimension = "version"
+            // Pure version uses only default assets
+        }
+        create("full") {
+            dimension = "version"
+            // Full version will include the plugins from the root directory
+        }
+    }
+
+    sourceSets {
+        getByName("full") {
+            assets.srcDir("../../protocol_plugins")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

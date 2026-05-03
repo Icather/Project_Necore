@@ -1,0 +1,6 @@
+{
+  "providerId": "DeepSeek Test",
+  "baseUrl": "https://api.deepseek.com/v1",
+  "authHeaderFormat": "Bearer %s",
+  "messageFormat": "openai"
+}

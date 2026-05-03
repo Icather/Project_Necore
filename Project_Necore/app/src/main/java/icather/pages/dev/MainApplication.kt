@@ -1,11 +1,13 @@
 package icather.pages.dev
 
 import android.app.Application
+import icather.pages.dev.api.plugin.ProtocolRegistry
 
 class MainApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // The database and default configs are now created in AppDatabase.kt
+        // Initialize dynamic protocols from assets
+        ProtocolRegistry.init(this)
     }
 }
