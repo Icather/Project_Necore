@@ -1,0 +1,256 @@
+package icather.pages.dev.chat
+
+import android.net.Uri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import icather.pages.dev.ChatMessage
+import icather.pages.dev.api.ApiService
+import icather.pages.dev.db.ApiConfig
+import icather.pages.dev.repository.ChatRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+
+data class ChatUiState(
+    val messages: List<ChatMessage> = emptyList(),
+    val attachedImages: List<Uri> = emptyList(),
+    val attachedFiles: List<Uri> = emptyList(),
+    val currentConversationId: Long? = null,
+    val activeApiConfig: ApiConfig? = null,
+    val apiConfigs: List<ApiConfig> = emptyList(),
+    val title: String = ""
+)
+
+class ChatViewModel(
+    private val repository: ChatRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(ChatUiState())
+    val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    private var apiService: ApiService? = null
+
+    init {
+        viewModelScope.launch {
+            repository.getAllApiConfigs().collect { configs ->
+                if (configs.isNotEmpty()) {
+                    val activeId = repository.getActiveApiId()
+                    var activeConfig = configs.find { it.id == activeId }
+                    if (activeConfig == null) {
+                        activeConfig = configs.first()
+                        repository.setActiveApiId(activeConfig.id)
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        apiConfigs = configs,
+                        activeApiConfig = activeConfig
+                    )
+                    initApiService(activeConfig)
+                }
+            }
+        }
+    }
+
+    fun onModelSelected(config: ApiConfig) {
+        repository.setActiveApiId(config.id)
+        _uiState.value = _uiState.value.copy(activeApiConfig = config)
+        initApiService(config)
+    }
+
+    private fun initApiService(config: ApiConfig) {
+        try {
+            apiService = repository.createApiService(config.provider)
+        } catch (e: Exception) {
+            addMessageToView(ChatMessage("Error initializing API: ${e.message}", false))
+        }
+    }
+
+    fun addAttachments(uris: List<Uri>, isImage: Boolean) {
+        if (isImage) {
+            val current = _uiState.value.attachedImages.toMutableList()
+            current.addAll(uris)
+            _uiState.value = _uiState.value.copy(attachedImages = current)
+        } else {
+            val current = _uiState.value.attachedFiles.toMutableList()
+            current.addAll(uris)
+            _uiState.value = _uiState.value.copy(attachedFiles = current)
+        }
+    }
+
+    fun removeAttachment(uri: Uri, isImage: Boolean) {
+        if (isImage) {
+            val current = _uiState.value.attachedImages.toMutableList()
+            current.remove(uri)
+            _uiState.value = _uiState.value.copy(attachedImages = current)
+        } else {
+            val current = _uiState.value.attachedFiles.toMutableList()
+            current.remove(uri)
+            _uiState.value = _uiState.value.copy(attachedFiles = current)
+        }
+    }
+
+    private fun resetAttachments() {
+        _uiState.value = _uiState.value.copy(attachedImages = emptyList(), attachedFiles = emptyList())
+    }
+
+    fun startNewChat() {
+        _uiState.value = _uiState.value.copy(
+            currentConversationId = null,
+            messages = emptyList(),
+            title = ""
+        )
+        resetAttachments()
+    }
+
+    fun loadConversation(conversationId: Long) {
+        viewModelScope.launch {
+            val conversation = repository.getConversation(conversationId)
+            val dbMessages = repository.getMessagesForConversation(conversationId)
+            
+            val newMessages = dbMessages.map { ChatMessage(it.text, it.isUser, it.isHtml) }
+            
+            _uiState.value = _uiState.value.copy(
+                currentConversationId = conversationId,
+                title = conversation?.title ?: "Chat",
+                messages = newMessages
+            )
+            resetAttachments()
+        }
+    }
+
+    fun sendMessage(text: String) {
+        val config = _uiState.value.activeApiConfig
+        val images = _uiState.value.attachedImages
+
+        if (config?.modelType == "OCR" && images.isEmpty()) {
+            addMessageToView(ChatMessage("Please attach an image for OCR.", false))
+            return
+        }
+
+        viewModelScope.launch {
+            if (config?.modelType == "OCR") {
+                val imageUri = images.first()
+                val fileName = "Image" // simplified
+                val userText = "Image: $fileName"
+                
+                addMessageToView(ChatMessage(userText, true))
+                val conversationId = ensureConversationExists(fileName)
+                repository.saveMessage(conversationId, userText, true)
+                
+                getOcrResponse(conversationId, imageUri, config)
+            } else {
+                addMessageToView(ChatMessage(text, true))
+                val conversationId = ensureConversationExists(text)
+                repository.saveMessage(conversationId, text, true)
+                
+                getAIResponse(conversationId, config!!)
+            }
+            resetAttachments()
+        }
+    }
+
+    private suspend fun ensureConversationExists(firstMessage: String): Long {
+        var id = _uiState.value.currentConversationId
+        if (id == null) {
+            val title = firstMessage.take(30)
+            id = repository.createNewConversation(title)
+            _uiState.value = _uiState.value.copy(currentConversationId = id, title = title)
+        }
+        return id
+    }
+
+    private suspend fun getOcrResponse(conversationId: Long, imageUri: Uri, config: ApiConfig) {
+        val apiKey = config.apiKey
+        if (apiKey.isEmpty()) {
+            addMessageToView(ChatMessage("API Key not set.", false))
+            return
+        }
+        
+        val service = apiService ?: return
+        
+        try {
+            val ocrText = repository.performOcr(service, imageUri, apiKey)
+            addMessageToView(ChatMessage(ocrText, false))
+            repository.saveMessage(conversationId, ocrText, false)
+        } catch (e: Exception) {
+            val msg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
+            addMessageToView(ChatMessage(msg, false))
+        }
+    }
+
+    private suspend fun getAIResponse(conversationId: Long, config: ApiConfig) {
+        val apiKey = config.apiKey
+        if (apiKey.isEmpty()) {
+            addMessageToView(ChatMessage("API Key not set.", false))
+            return
+        }
+
+        val service = apiService ?: return
+        val dbMessages = repository.getMessagesForConversation(conversationId)
+        
+        // Remove HTML tags for API
+        val apiMessages = dbMessages.map { 
+            val role = if (it.isUser) "user" else "assistant"
+            val content = it.text.replace(Regex("<font.*?</font>"), "")
+            ApiService.ApiMessage(role, content)
+        }
+
+        val aiMessageIndex = _uiState.value.messages.size
+        addMessageToView(ChatMessage("", false, isHtml = true))
+
+        val finalContent = StringBuilder()
+        val finalReasoning = StringBuilder()
+
+        repository.getCompletion(service, apiMessages, apiKey)
+            .catch { e ->
+                val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
+                updateMessageAt(aiMessageIndex, errorMsg)
+            }
+            .collect { chunk ->
+                chunk.content?.let { finalContent.append(it) }
+                chunk.reasoning?.let { finalReasoning.append(it) }
+
+                val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
+                val displayText = reasoningText + finalContent.toString()
+                
+                updateMessageAt(aiMessageIndex, displayText)
+            }
+
+        val dbMessageText = if (finalReasoning.isNotEmpty()) {
+            "<font color='#999999'>${finalReasoning}</font><br>${finalContent}"
+        } else {
+            finalContent.toString()
+        }
+
+        repository.saveMessage(conversationId, dbMessageText, false, isHtml = true)
+    }
+
+    private fun addMessageToView(message: ChatMessage) {
+        val current = _uiState.value.messages.toMutableList()
+        current.add(message)
+        _uiState.value = _uiState.value.copy(messages = current)
+    }
+
+    private fun updateMessageAt(index: Int, text: String) {
+        val current = _uiState.value.messages.toMutableList()
+        if (index < current.size) {
+            current[index] = current[index].copy(text = text)
+            _uiState.value = _uiState.value.copy(messages = current)
+        }
+    }
+
+    class Factory(private val repository: ChatRepository) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return ChatViewModel(repository) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
+    }
+}
