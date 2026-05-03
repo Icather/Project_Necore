@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 class AnthropicApiService : ApiService {
-    override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String): Flow<ApiService.ApiResponseChunk> = flow {
+    override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any>): Flow<ApiService.ApiResponseChunk> = flow {
         // TODO: Implement actual Anthropic network call here
         emit(ApiService.ApiResponseChunk(content = "This is a stub Anthropic response. Please configure network call.", reasoning = null))
     }

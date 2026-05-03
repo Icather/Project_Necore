@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -139,6 +140,27 @@ fun ChatScreen(
                             }
                         )
                     )
+
+                    if ("thinking_mode" in uiState.supportedCapabilities) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 0.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "思考模式 (思维链)", 
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Switch(
+                                checked = uiState.isThinkingModeEnabled,
+                                onCheckedChange = { viewModel.toggleThinkingMode(it) },
+                                modifier = Modifier.scale(0.8f) // Make it a bit smaller
+                            )
+                        }
+                    }
 
                     Row(
                         modifier = Modifier

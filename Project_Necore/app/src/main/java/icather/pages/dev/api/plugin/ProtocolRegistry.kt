@@ -10,6 +10,7 @@ import java.io.InputStreamReader
 object ProtocolRegistry {
 
     private val protocols = mutableMapOf<String, () -> ApiService>()
+    private val pluginConfigs = mutableMapOf<String, ProtocolPluginJson>()
     private val gson = Gson()
     private var isInitialized = false
 
@@ -43,6 +44,7 @@ object ProtocolRegistry {
                         
                         if (config != null && config.providerId.isNotBlank()) {
                             protocols[config.providerId] = { DynamicApiService(config) }
+                            pluginConfigs[config.providerId] = config
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
@@ -62,5 +64,9 @@ object ProtocolRegistry {
         val factory = protocols[providerName] 
             ?: throw IllegalArgumentException("Unsupported API provider: $providerName. Please download the protocol plugin.")
         return factory()
+    }
+
+    fun getCapabilities(providerName: String): List<String> {
+        return pluginConfigs[providerName]?.capabilities ?: emptyList()
     }
 }

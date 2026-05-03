@@ -53,7 +53,7 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
         apiService.performOcr(imageUri, apiKey)
     }
 
-    fun getCompletion(apiService: ApiService, messages: List<ApiService.ApiMessage>, apiKey: String): Flow<ApiService.ApiResponseChunk> {
-        return apiService.getCompletion(messages, apiKey).flowOn(Dispatchers.IO)
+    fun getCompletion(apiService: ApiService, messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any> = emptyMap()): Flow<ApiService.ApiResponseChunk> {
+        return apiService.getCompletion(messages, apiKey, options).flowOn(Dispatchers.IO)
     }
 }

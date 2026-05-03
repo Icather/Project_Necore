@@ -4,5 +4,6 @@ data class ProtocolPluginJson(
     val providerId: String,
     val baseUrl: String,
     val authHeaderFormat: String,
-    val messageFormat: String
+    val messageFormat: String,
+    val capabilities: List<String>? = emptyList()
 )

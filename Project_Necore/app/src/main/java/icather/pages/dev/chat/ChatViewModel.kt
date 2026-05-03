@@ -8,6 +8,7 @@ import icather.pages.dev.ChatMessage
 import icather.pages.dev.api.ApiService
 import icather.pages.dev.db.ApiConfig
 import icather.pages.dev.repository.ChatRepository
+import icather.pages.dev.api.plugin.ProtocolRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +25,9 @@ data class ChatUiState(
     val currentConversationId: Long? = null,
     val activeApiConfig: ApiConfig? = null,
     val apiConfigs: List<ApiConfig> = emptyList(),
-    val title: String = ""
+    val title: String = "",
+    val supportedCapabilities: List<String> = emptyList(),
+    val isThinkingModeEnabled: Boolean = false
 )
 
 class ChatViewModel(
@@ -58,16 +61,27 @@ class ChatViewModel(
 
     fun onModelSelected(config: ApiConfig) {
         repository.setActiveApiId(config.id)
-        _uiState.value = _uiState.value.copy(activeApiConfig = config)
+        val capabilities = ProtocolRegistry.getCapabilities(config.provider)
+        _uiState.value = _uiState.value.copy(
+            activeApiConfig = config,
+            supportedCapabilities = capabilities,
+            isThinkingModeEnabled = false // Reset on model change
+        )
         initApiService(config)
     }
 
     private fun initApiService(config: ApiConfig) {
         try {
             apiService = repository.createApiService(config.provider)
+            val capabilities = ProtocolRegistry.getCapabilities(config.provider)
+            _uiState.value = _uiState.value.copy(supportedCapabilities = capabilities)
         } catch (e: Exception) {
             addMessageToView(ChatMessage("Error initializing API: ${e.message}", false))
         }
+    }
+
+    fun toggleThinkingMode(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(isThinkingModeEnabled = enabled)
     }
 
     fun addAttachments(uris: List<Uri>, isImage: Boolean) {
@@ -205,8 +219,9 @@ class ChatViewModel(
 
         val finalContent = StringBuilder()
         val finalReasoning = StringBuilder()
+        val options = mapOf("thinking_mode" to _uiState.value.isThinkingModeEnabled)
 
-        repository.getCompletion(service, apiMessages, apiKey)
+        repository.getCompletion(service, apiMessages, apiKey, options)
             .catch { e ->
                 val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
                 updateMessageAt(aiMessageIndex, errorMsg)

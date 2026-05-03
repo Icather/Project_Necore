@@ -21,7 +21,7 @@ class SiliconFlowApiService : ApiService {
     private data class SiliconFlowApiStreamChoice(val delta: SiliconFlowStreamDelta)
     private data class SiliconFlowStreamDelta(val content: String?, val reasoning_content: String?)
 
-    override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String): Flow<ApiService.ApiResponseChunk> = flow {
+    override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any>): Flow<ApiService.ApiResponseChunk> = flow {
         val requestBody = SiliconFlowApiRequest("deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", messages, true)
         val requestJson = gson.toJson(requestBody)
 

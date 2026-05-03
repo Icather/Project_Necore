@@ -22,9 +22,10 @@ interface ApiService {
      * Sends a list of messages to the API and returns a flow of response chunks.
      * @param messages The list of messages to send, in the format required by the API.
      * @param apiKey The API key to use for the request.
+     * @param options A map of dynamic options to toggle model-specific features (e.g., "thinking_mode").
      * @return A Flow that emits [ApiResponseChunk]s.
      */
-    fun getCompletion(messages: List<ApiMessage>, apiKey: String): Flow<ApiResponseChunk>
+    fun getCompletion(messages: List<ApiMessage>, apiKey: String, options: Map<String, Any> = emptyMap()): Flow<ApiResponseChunk>
 
     /**
      * Performs OCR on an image and returns the recognized text.
