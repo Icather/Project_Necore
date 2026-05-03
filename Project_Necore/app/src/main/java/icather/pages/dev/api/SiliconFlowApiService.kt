@@ -17,9 +17,10 @@ class SiliconFlowApiService : ApiService {
 
     // Data classes specific to SiliconFlow's API
     private data class SiliconFlowApiRequest(val model: String, val messages: List<ApiService.ApiMessage>, val stream: Boolean)
-    private data class SiliconFlowApiStreamResponse(val choices: List<SiliconFlowApiStreamChoice>)
+    private data class SiliconFlowApiStreamResponse(val choices: List<SiliconFlowApiStreamChoice>, val usage: SiliconFlowUsage? = null)
     private data class SiliconFlowApiStreamChoice(val delta: SiliconFlowStreamDelta)
     private data class SiliconFlowStreamDelta(val content: String?, val reasoning_content: String?)
+    private data class SiliconFlowUsage(val prompt_tokens: Int?, val completion_tokens: Int?)
 
     override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any>): Flow<ApiService.ApiResponseChunk> = flow {
         val requestBody = SiliconFlowApiRequest("deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", messages, true)
@@ -45,7 +46,14 @@ class SiliconFlowApiService : ApiService {
                             try {
                                 val chunk = gson.fromJson(json, SiliconFlowApiStreamResponse::class.java)
                                 val delta = chunk.choices.firstOrNull()?.delta
-                                emit(ApiService.ApiResponseChunk(content = delta?.content, reasoning = delta?.reasoning_content))
+                                val usage = chunk.usage
+                                emit(ApiService.ApiResponseChunk(
+                                    content = delta?.content, 
+                                    reasoning = delta?.reasoning_content,
+                                    inputTokens = usage?.prompt_tokens,
+                                    outputTokens = usage?.completion_tokens,
+                                    cacheHitTokens = null // SiliconFlow doesn't support cache hit tokens yet, but DeepSeek will
+                                ))
                             } catch (e: Exception) {
                                 println("Error parsing stream chunk: $json, error: ${e.message}")
                             }

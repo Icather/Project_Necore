@@ -126,7 +126,16 @@ class ChatViewModel(
             val conversation = repository.getConversation(conversationId)
             val dbMessages = repository.getMessagesForConversation(conversationId)
             
-            val newMessages = dbMessages.map { ChatMessage(it.text, it.isUser, it.isHtml) }
+            val newMessages = dbMessages.map { 
+                ChatMessage(
+                    text = it.text, 
+                    isUser = it.isUser, 
+                    isHtml = it.isHtml,
+                    inputTokens = it.inputTokens,
+                    outputTokens = it.outputTokens,
+                    cacheHitTokens = it.cacheHitTokens
+                ) 
+            }
             
             _uiState.value = _uiState.value.copy(
                 currentConversationId = conversationId,
@@ -219,6 +228,10 @@ class ChatViewModel(
 
         val finalContent = StringBuilder()
         val finalReasoning = StringBuilder()
+        var finalInputTokens: Int? = null
+        var finalOutputTokens: Int? = null
+        var finalCacheHitTokens: Int? = null
+        
         val options = mapOf("thinking_mode" to _uiState.value.isThinkingModeEnabled)
 
         repository.getCompletion(service, apiMessages, apiKey, options)
@@ -229,11 +242,16 @@ class ChatViewModel(
             .collect { chunk ->
                 chunk.content?.let { finalContent.append(it) }
                 chunk.reasoning?.let { finalReasoning.append(it) }
+                
+                // Track usage if present in the chunk
+                if (chunk.inputTokens != null) finalInputTokens = chunk.inputTokens
+                if (chunk.outputTokens != null) finalOutputTokens = chunk.outputTokens
+                if (chunk.cacheHitTokens != null) finalCacheHitTokens = chunk.cacheHitTokens
 
                 val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
                 val displayText = reasoningText + finalContent.toString()
                 
-                updateMessageAt(aiMessageIndex, displayText)
+                updateMessageAt(aiMessageIndex, displayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens)
             }
 
         val dbMessageText = if (finalReasoning.isNotEmpty()) {
@@ -242,7 +260,15 @@ class ChatViewModel(
             finalContent.toString()
         }
 
-        repository.saveMessage(conversationId, dbMessageText, false, isHtml = true)
+        repository.saveMessage(
+            conversationId = conversationId, 
+            text = dbMessageText, 
+            isUser = false, 
+            isHtml = true,
+            inputTokens = finalInputTokens,
+            outputTokens = finalOutputTokens,
+            cacheHitTokens = finalCacheHitTokens
+        )
     }
 
     private fun addMessageToView(message: ChatMessage) {
@@ -251,10 +277,15 @@ class ChatViewModel(
         _uiState.value = _uiState.value.copy(messages = current)
     }
 
-    private fun updateMessageAt(index: Int, text: String) {
+    private fun updateMessageAt(index: Int, text: String, inputTokens: Int? = null, outputTokens: Int? = null, cacheHitTokens: Int? = null) {
         val current = _uiState.value.messages.toMutableList()
         if (index < current.size) {
-            current[index] = current[index].copy(text = text)
+            current[index] = current[index].copy(
+                text = text,
+                inputTokens = inputTokens,
+                outputTokens = outputTokens,
+                cacheHitTokens = cacheHitTokens
+            )
             _uiState.value = _uiState.value.copy(messages = current)
         }
     }

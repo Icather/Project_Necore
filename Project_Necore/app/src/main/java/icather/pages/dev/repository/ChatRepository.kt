@@ -45,8 +45,24 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
         db.conversationDao().insert(Conversation(title = title))
     }
 
-    suspend fun saveMessage(conversationId: Long, text: String, isUser: Boolean, isHtml: Boolean = false): Long = withContext(Dispatchers.IO) {
-        db.messageDao().insert(Message(conversationId = conversationId, text = text, isUser = isUser, isHtml = isHtml))
+    suspend fun saveMessage(
+        conversationId: Long, 
+        text: String, 
+        isUser: Boolean, 
+        isHtml: Boolean = false,
+        inputTokens: Int? = null,
+        outputTokens: Int? = null,
+        cacheHitTokens: Int? = null
+    ): Long = withContext(Dispatchers.IO) {
+        db.messageDao().insert(Message(
+            conversationId = conversationId, 
+            text = text, 
+            isUser = isUser, 
+            isHtml = isHtml,
+            inputTokens = inputTokens,
+            outputTokens = outputTokens,
+            cacheHitTokens = cacheHitTokens
+        ))
     }
 
     suspend fun performOcr(apiService: ApiService, imageUri: Uri, apiKey: String): String = withContext(Dispatchers.IO) {

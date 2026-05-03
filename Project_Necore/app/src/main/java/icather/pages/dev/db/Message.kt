@@ -23,5 +23,8 @@ data class Message(
     val text: String,
     val isUser: Boolean,
     val isHtml: Boolean = false,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val inputTokens: Int? = null,
+    val outputTokens: Int? = null,
+    val cacheHitTokens: Int? = null
 )

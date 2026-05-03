@@ -6,5 +6,8 @@ package icather.pages.dev.api
  */
 data class ApiResponseChunk(
     val content: String?,
-    val reasoning: String?
+    val reasoning: String?,
+    val inputTokens: Int? = null,
+    val outputTokens: Int? = null,
+    val cacheHitTokens: Int? = null
 )

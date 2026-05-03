@@ -87,6 +87,14 @@
 2. **缺失网络容错与弹性 (Resilience)**: 发生网络中断时缺乏指数退避重试 (Exponential Backoff) 策略。
 3. **缺乏结构化 Prompt 管理**: 现阶段尚未隔离系统设定 (System Prompt) 和角色扮演上下文，输出格式无法收敛。
 
+### 5.3 进阶特性蓝图：灵魂引擎 (Soul Engine) 待办列表
+受 OpenClaw 架构启发，未来计划将应用从“纯工具”向“赛博陪伴体”升级：
+- **[TODO] `Identity` (身份与 UI 联动)**: 支持加载不同的人格设定，并使其影响应用全局的 UI 主题与聊天气泡风格。
+- **[TODO] `User` (用户画像库)**: 利用 Tool Calls 从日常对话中提取事实（Preferences），保存在本地供大模型长期记忆。
+- **[TODO] `Soul` (情感状态机)**: 加入心情指数与好感度（Affection）变量，根据情感波动改变回复语气。
+- **[TODO] `Tools` (端内能力)**: 提供查询本地日历、设定闹钟、切换应用壁纸等受限环境下的 Agent 操控能力。
+- **[TODO] `Heartbeat` (心跳机制)**: 借助 Android `WorkManager` 进行后台静默唤醒，根据时间与天气主动给用户推送 AI 关怀消息（Notification）。
+
 ## 6. 待适配的提供商 (国内主流大模型 API 生态)
 
 基于最新上线的“单仓库多变体架构与 JSON 动态协议加载”系统，后续将逐步为以下国内主流 API 提供商编写独立的 `.json` 插件并放入 `protocol_plugins` 目录供外部下载或全量编译：
@@ -148,3 +156,11 @@
 1. **协议层能力声明**：`ProtocolPluginJson` 中新增了 `capabilities: List<String>` 字段。通过 JSON 插件的免编译化声明，大模型可以将自己支持的高级功能告诉应用。
 2. **底层参数透传**：网络核心接口 `ApiService.getCompletion` 新增了 `options: Map<String, Any>` 参数字典，允许 UI 层的设置直接穿透至底层，组装专有的请求体字段（如 `extra_body`）。
 3. **UI 动态渲染**：在 `ChatScreen` 的主聊天界面，Compose 会实时监听当前所选模型的 `supportedCapabilities`。当且仅当命中特定能力标识（例如 `"thinking_mode"`）时，才会动态渲染出配套的交互开关（Toggle/Switch），实现零侵入式的界面解耦。
+
+### 6.4 实时 Token 与缓存命中率监控 (Token & Cache Hit Metrics)
+
+为直观量化“多轮对话滑动窗口”等上下文截断策略的性能收益，项目已实装并持久化了 Token 使用指标监控架构：
+
+1. **底层数据持久化**：通过 `Room Database` (MIGRATION_5_6)，对 `Message` 表进行了无损扩容，新增了 `inputTokens`、`outputTokens` 和 `cacheHitTokens` 列。这意味着所有的 Token 消耗日志都将安全落盘，并伴随聊天记录永久存在。
+2. **流式拦截与解析**：在大模型基于 SSE (Server-Sent Events) 返回最后一个包裹了 `usage` 的 JSON 数据块时，`ApiService` 层会自动拦截并提取 `prompt_tokens` 与独有的硬盘缓存命中量，并通过 Flow 回传。
+3. **极简动态角标渲染**：在 `ChatScreen` 的 AI 消息气泡底部，基于 Jetpack Compose 动态渲染工程化格式 (K/M 单位转化) 的迷你角标，格式形如：`📥 输入: 32.5K (命中率: 98.2%) | 📤 输出: 1.2K`。该指标仅在检测到有效 Token 统计数据时才会优雅显现。

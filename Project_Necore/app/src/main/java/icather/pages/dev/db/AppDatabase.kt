@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@Database(entities = [Conversation::class, Message::class, ApiConfig::class], version = 5, exportSchema = false)
+@Database(entities = [Conversation::class, Message::class, ApiConfig::class], version = 6, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun conversationDao(): ConversationDao
@@ -29,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "chat_database"
-                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                  .fallbackToDestructiveMigration(true)
                  .addCallback(AppDatabaseCallback(context))
                  .build()
@@ -50,6 +50,14 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("INSERT INTO `api_configs_new` (`id`, `provider`, `name`, `apiKey`, `modelName`) SELECT `id`, `provider`, `name`, `apiKey`, `modelType` FROM `api_configs`")
                 database.execSQL("DROP TABLE `api_configs`")
                 database.execSQL("ALTER TABLE `api_configs_new` RENAME TO `api_configs`")
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `messages` ADD COLUMN `inputTokens` INTEGER")
+                database.execSQL("ALTER TABLE `messages` ADD COLUMN `outputTokens` INTEGER")
+                database.execSQL("ALTER TABLE `messages` ADD COLUMN `cacheHitTokens` INTEGER")
             }
         }
     }

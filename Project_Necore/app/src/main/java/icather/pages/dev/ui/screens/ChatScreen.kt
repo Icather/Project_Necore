@@ -234,6 +234,33 @@ fun ChatMessageItem(message: ChatMessage) {
                     markdown = message.text,
                     color = contentColor
                 )
+                
+                if (message.inputTokens != null || message.outputTokens != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val hitText = if (message.cacheHitTokens != null && message.inputTokens != null && message.inputTokens > 0) {
+                        val hitRate = (message.cacheHitTokens.toDouble() / message.inputTokens) * 100
+                        String.format(" (命中率: %.1f%%)", hitRate)
+                    } else ""
+                    
+                    val formatTokens: (Int) -> String = { count ->
+                        when {
+                            count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
+                            count >= 1_000 -> String.format("%.1fK", count / 1000.0)
+                            else -> count.toString()
+                        }
+                    }
+                    
+                    val inputStr = message.inputTokens?.let { "📥 输入: ${formatTokens(it)}$hitText" } ?: ""
+                    val outputStr = message.outputTokens?.let { "📤 输出: ${formatTokens(it)}" } ?: ""
+                    val separator = if (inputStr.isNotEmpty() && outputStr.isNotEmpty()) "  |  " else ""
+                    
+                    Text(
+                        text = "$inputStr$separator$outputStr",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = contentColor.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
         }
     }
