@@ -63,6 +63,9 @@ class ChatActivity : AppCompatActivity() {
                         val intent = Intent(this, HistoryActivity::class.java)
                         historyLauncher.launch(intent)
                     },
+                    onNavigateToSettings = {
+                        startActivity(Intent(this, SettingsActivity::class.java))
+                    },
                     onModelSelectorClick = {
                         showModelSelector()
                     },

@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 fun ChatScreen(
     viewModel: ChatViewModel,
     onOpenDrawer: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onModelSelectorClick: () -> Unit,
     onImageUploadClick: () -> Unit,
     onFileUploadClick: () -> Unit
@@ -56,10 +57,8 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = onModelSelectorClick) {
-                        val activeConfig = uiState.activeApiConfig
-                        val text = if (activeConfig != null) "${activeConfig.modelType} | ${activeConfig.name}" else "Select Model"
-                        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -88,65 +87,91 @@ fun ChatScreen(
                 }
             }
 
-            // Attachments Preview Area
-            if (uiState.attachedImages.isNotEmpty() || uiState.attachedFiles.isNotEmpty()) {
-                // Simplified attachment preview for Compose
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    uiState.attachedImages.forEach { uri ->
-                        Chip(text = "Image Attached", onRemove = { viewModel.removeAttachment(uri, true) })
-                    }
-                    uiState.attachedFiles.forEach { uri ->
-                        Chip(text = "File Attached", onRemove = { viewModel.removeAttachment(uri, false) })
-                    }
-                }
-            }
-
             // Input Area
-            Row(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                IconButton(onClick = onImageUploadClick) {
-                    Icon(Icons.Filled.Image, contentDescription = "Upload Image")
-                }
-                IconButton(onClick = onFileUploadClick) {
-                    Icon(Icons.Filled.AttachFile, contentDescription = "Upload File")
-                }
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 4.dp),
-                    placeholder = { Text("Type a message...") },
-                    maxLines = 5,
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-                    keyboardActions = KeyboardActions(
-                        onSend = {
-                            if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
-                                viewModel.sendMessage(inputText)
-                                inputText = ""
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    if (uiState.attachedImages.isNotEmpty() || uiState.attachedFiles.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            uiState.attachedImages.forEach { uri ->
+                                Chip(text = "Image", onRemove = { viewModel.removeAttachment(uri, true) })
+                            }
+                            uiState.attachedFiles.forEach { uri ->
+                                Chip(text = "File", onRemove = { viewModel.removeAttachment(uri, false) })
                             }
                         }
-                    ),
-                    shape = RoundedCornerShape(24.dp)
-                )
-                IconButton(
-                    onClick = {
-                        if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
-                            viewModel.sendMessage(inputText)
-                            inputText = ""
+                        Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+
+                    TextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp),
+                        placeholder = { Text("Type a message...") },
+                        maxLines = 5,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
+                        keyboardActions = KeyboardActions(
+                            onSend = {
+                                if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
+                                    viewModel.sendMessage(inputText)
+                                    inputText = ""
+                                }
+                            }
+                        )
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = onModelSelectorClick,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            val activeConfig = uiState.activeApiConfig
+                            val text = if (activeConfig != null) "${activeConfig.modelType} | ${activeConfig.name}" else "Select Model"
+                            Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        
+                        IconButton(onClick = onImageUploadClick) {
+                            Icon(Icons.Filled.Image, contentDescription = "Upload Image")
+                        }
+                        IconButton(onClick = onFileUploadClick) {
+                            Icon(Icons.Filled.AttachFile, contentDescription = "Upload File")
+                        }
+                        IconButton(
+                            onClick = {
+                                if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
+                                    viewModel.sendMessage(inputText)
+                                    inputText = ""
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
-                ) {
-                    Icon(Icons.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }

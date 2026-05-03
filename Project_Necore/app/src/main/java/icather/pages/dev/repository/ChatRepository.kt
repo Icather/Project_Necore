@@ -2,7 +2,6 @@ package icather.pages.dev.repository
 
 import android.content.Context
 import android.net.Uri
-import icather.pages.dev.api.ApiResponseChunk
 import icather.pages.dev.api.ApiService
 import icather.pages.dev.api.ApiServiceFactory
 import icather.pages.dev.db.ApiConfig
@@ -54,7 +53,7 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
         apiService.performOcr(imageUri, apiKey)
     }
 
-    fun getCompletion(apiService: ApiService, messages: List<ApiService.ApiMessage>, apiKey: String): Flow<ApiResponseChunk> {
+    fun getCompletion(apiService: ApiService, messages: List<ApiService.ApiMessage>, apiKey: String): Flow<ApiService.ApiResponseChunk> {
         return apiService.getCompletion(messages, apiKey).flowOn(Dispatchers.IO)
     }
 }
