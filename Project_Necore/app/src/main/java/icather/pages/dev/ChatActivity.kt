@@ -88,7 +88,7 @@ class ChatActivity : AppCompatActivity() {
         val configs = viewModel.uiState.value.apiConfigs
         if (configs.isEmpty()) return
         
-        val names = configs.map { "${it.modelType} | ${it.name}" }.toTypedArray()
+        val names = configs.map { "${it.provider} | ${it.modelName}" }.toTypedArray()
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Select Model")
             .setItems(names) { _, which ->

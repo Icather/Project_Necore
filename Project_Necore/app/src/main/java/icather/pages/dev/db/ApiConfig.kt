@@ -10,5 +10,5 @@ data class ApiConfig(
     val provider: String,
     val name: String,
     val apiKey: String,
-    val modelType: String
+    val modelName: String
 )

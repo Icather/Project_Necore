@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@Database(entities = [Conversation::class, Message::class, ApiConfig::class], version = 4, exportSchema = false)
+@Database(entities = [Conversation::class, Message::class, ApiConfig::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun conversationDao(): ConversationDao
@@ -29,7 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "chat_database"
-                ).addMigrations(MIGRATION_3_4)
+                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                  .fallbackToDestructiveMigration(true)
                  .addCallback(AppDatabaseCallback(context))
                  .build()
@@ -41,6 +41,15 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE `api_configs` ADD COLUMN `modelType` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS `api_configs_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `provider` TEXT NOT NULL, `name` TEXT NOT NULL, `apiKey` TEXT NOT NULL, `modelName` TEXT NOT NULL DEFAULT '')")
+                database.execSQL("INSERT INTO `api_configs_new` (`id`, `provider`, `name`, `apiKey`, `modelName`) SELECT `id`, `provider`, `name`, `apiKey`, `modelType` FROM `api_configs`")
+                database.execSQL("DROP TABLE `api_configs`")
+                database.execSQL("ALTER TABLE `api_configs_new` RENAME TO `api_configs`")
             }
         }
     }

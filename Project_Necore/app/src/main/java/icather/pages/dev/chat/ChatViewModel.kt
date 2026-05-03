@@ -127,13 +127,13 @@ class ChatViewModel(
         val config = _uiState.value.activeApiConfig
         val images = _uiState.value.attachedImages
 
-        if (config?.modelType == "OCR" && images.isEmpty()) {
+        if (config?.modelName == "OCR" && images.isEmpty()) {
             addMessageToView(ChatMessage("Please attach an image for OCR.", false))
             return
         }
 
         viewModelScope.launch {
-            if (config?.modelType == "OCR") {
+            if (config?.modelName == "OCR") {
                 val imageUri = images.first()
                 val fileName = "Image" // simplified
                 val userText = "Image: $fileName"

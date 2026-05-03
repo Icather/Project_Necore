@@ -75,8 +75,11 @@ class SettingsActivity : AppCompatActivity() {
                 SettingsScreen(
                     viewModel = viewModel,
                     onNavigateBack = { finish() },
-                    onNavigateToApiConfig = { startActivity(Intent(this, ApiConfigActivity::class.java)) },
-                    onNavigateToAbout = { startActivity(Intent(this, AboutActivity::class.java)) },
+                    onNavigateToApiConfig = { startActivity(Intent(this@SettingsActivity, ApiConfigActivity::class.java)) },
+                    onNavigateToPlugins = {
+                        android.widget.Toast.makeText(this@SettingsActivity, "Plugin Manager coming soon!", android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    onNavigateToAbout = { startActivity(Intent(this@SettingsActivity, AboutActivity::class.java)) },
                     onLanguageClick = { showLanguageSelectionDialog() },
                     onImportApiClick = { importApiLauncher.launch(arrayOf("application/json")) },
                     onExportChatClick = { showExportChatHistoryDialog() },

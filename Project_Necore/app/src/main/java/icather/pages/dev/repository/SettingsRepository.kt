@@ -18,6 +18,32 @@ import java.security.MessageDigest
 class SettingsRepository(private val context: Context, private val db: AppDatabase) {
 
     private val gson = Gson()
+    private val prefs = context.getSharedPreferences("api_prefs", Context.MODE_PRIVATE)
+
+    companion object {
+        const val DEFAULT_API_ID = 1L
+    }
+
+    fun getAllApiConfigs() = db.apiConfigDao().getAll()
+
+    val activeApiConfigId: kotlinx.coroutines.flow.Flow<Long> = kotlinx.coroutines.flow.flow {
+        while (true) {
+            emit(prefs.getLong("active_api_id", DEFAULT_API_ID))
+            kotlinx.coroutines.delay(500) // Simple polling for now
+        }
+    }
+
+    suspend fun setActiveApiConfigId(id: Long) = withContext(Dispatchers.IO) {
+        prefs.edit().putLong("active_api_id", id).apply()
+    }
+
+    suspend fun insertApiConfig(config: ApiConfig) = withContext(Dispatchers.IO) {
+        db.apiConfigDao().insert(config)
+    }
+
+    suspend fun deleteApiConfig(config: ApiConfig) = withContext(Dispatchers.IO) {
+        db.apiConfigDao().deleteById(config.id)
+    }
 
     suspend fun getApiConfigsJson(): String? = withContext(Dispatchers.IO) {
         val apiConfigs = db.apiConfigDao().getAllOnce()

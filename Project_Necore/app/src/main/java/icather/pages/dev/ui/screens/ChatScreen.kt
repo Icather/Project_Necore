@@ -151,7 +151,7 @@ fun ChatScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             val activeConfig = uiState.activeApiConfig
-                            val text = if (activeConfig != null) "${activeConfig.modelType} | ${activeConfig.name}" else "Select Model"
+                            val text = if (activeConfig != null) "${activeConfig.provider} | ${activeConfig.modelName}" else "Select Model"
                             Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         

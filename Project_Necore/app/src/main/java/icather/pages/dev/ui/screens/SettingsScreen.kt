@@ -24,6 +24,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToApiConfig: () -> Unit,
+    onNavigateToPlugins: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onLanguageClick: () -> Unit,
     onImportApiClick: () -> Unit,
@@ -84,7 +85,15 @@ fun SettingsScreen(
                         title = stringResource(id = R.string.api_configuration),
                         onClick = onNavigateToApiConfig
                     )
-                    Divider()
+                    HorizontalDivider()
+                }
+                item {
+                    SettingsItem(
+                        icon = Icons.Filled.Extension,
+                        title = "提供商协议插件",
+                        onClick = onNavigateToPlugins
+                    )
+                    HorizontalDivider()
                 }
                 item {
                     SettingsItem(
