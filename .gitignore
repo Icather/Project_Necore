@@ -1,0 +1,15 @@
+# Agent context and workspace generated plans
+/.agent/
+/项目大纲.md
+
+# Ignore Android build folders that shouldn't be tracked at the root level if any
+/Project_Necore/app/build/
+/Project_Necore/build/
+/Project_Necore/.idea/
+/Project_Necore/.gradle/
+/Project_Necore/local.properties
+/Project_Necore/hs_err_*.log
+/Project_Necore/replay_pid*.log
+
+# Ignore root level IDE configuration files
+/.idea/
