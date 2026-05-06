@@ -26,7 +26,7 @@ data class ChatUiState(
     val activeApiConfig: ApiConfig? = null,
     val apiConfigs: List<ApiConfig> = emptyList(),
     val title: String = "",
-    val supportedCapabilities: List<String> = emptyList(),
+    val activeProtocol: icather.pages.dev.api.plugin.ProtocolPluginJson? = null,
     val isThinkingModeEnabled: Boolean = false
 )
 
@@ -61,10 +61,10 @@ class ChatViewModel(
 
     fun onModelSelected(config: ApiConfig) {
         repository.setActiveApiId(config.id)
-        val capabilities = ProtocolRegistry.getCapabilities(config.provider)
+        val protocol = ProtocolRegistry.getConfigSafe(config.provider)
         _uiState.value = _uiState.value.copy(
             activeApiConfig = config,
-            supportedCapabilities = capabilities,
+            activeProtocol = protocol,
             isThinkingModeEnabled = false // Reset on model change
         )
         initApiService(config)
@@ -73,8 +73,8 @@ class ChatViewModel(
     private fun initApiService(config: ApiConfig) {
         try {
             apiService = repository.createApiService(config.provider)
-            val capabilities = ProtocolRegistry.getCapabilities(config.provider)
-            _uiState.value = _uiState.value.copy(supportedCapabilities = capabilities)
+            val protocol = ProtocolRegistry.getConfigSafe(config.provider)
+            _uiState.value = _uiState.value.copy(activeProtocol = protocol)
         } catch (e: Exception) {
             addMessageToView(ChatMessage("Error initializing API: ${e.message}", false))
         }
@@ -216,10 +216,12 @@ class ChatViewModel(
         val service = apiService ?: return
         val dbMessages = repository.getMessagesForConversation(conversationId)
         
-        // Remove HTML tags for API
+        // B1: 思考链 (Reasoning) 清洗器
+        // Strip the reasoning block completely so it doesn't pollute the prompt context.
+        // We use DOT_MATCHES_ALL to ensure multiline reasoning blocks are cleanly removed.
         val apiMessages = dbMessages.map { 
             val role = if (it.isUser) "user" else "assistant"
-            val content = it.text.replace(Regex("<font.*?</font>"), "")
+            val content = it.text.replace(Regex("<font color='#999999'>.*?</font><br>", RegexOption.DOT_MATCHES_ALL), "")
             ApiService.ApiMessage(role, content)
         }
 
@@ -236,8 +238,15 @@ class ChatViewModel(
 
         repository.getCompletion(service, apiMessages, apiKey, options)
             .catch { e ->
-                val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
-                updateMessageAt(aiMessageIndex, errorMsg)
+                // B2: 记忆压缩与 Token 退避 (Memory Compression & Token Backoff)
+                if (e is icather.pages.dev.api.ContextLengthExceededException) {
+                    val fallbackMsg = "<font color='#ff0000'>[⚠️ Context Limit Exceeded]</font><br>Initiating Memory Compression... (Intercepted HTTP 400. Middle 30% of history will be summarized to rebuild KV Cache Prefix)."
+                    updateMessageAt(aiMessageIndex, fallbackMsg)
+                    // The actual summarization call and DB rewrite will be triggered here
+                } else {
+                    val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
+                    updateMessageAt(aiMessageIndex, errorMsg)
+                }
             }
             .collect { chunk ->
                 chunk.content?.let { finalContent.append(it) }

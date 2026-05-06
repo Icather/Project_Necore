@@ -141,7 +141,7 @@ fun ChatScreen(
                         )
                     )
 
-                    if ("thinking_mode" in uiState.supportedCapabilities) {
+                    if (uiState.activeProtocol?.featureReasoning?.supported == true) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

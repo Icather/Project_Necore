@@ -25,12 +25,6 @@ object ProtocolRegistry {
         isInitialized = true
 
         try {
-            // "plugins" folder might not exist in the "pure" flavor, so we catch exceptions.
-            // Wait, in build.gradle.kts we mapped `protocol_plugins` to the root of assets, 
-            // so the files are in `assets/` directly or `assets/plugins/`?
-            // `assets.srcDir("../../protocol_plugins")` maps the *contents* of protocol_plugins directly into the root of `assets/`.
-            // So deepseek_test.json will be at `assets/deepseek_test.json`.
-            // We should list all files in `assets/` that end with `.json`.
             val assetManager = context.assets
             val files = assetManager.list("") ?: emptyArray()
             
@@ -42,12 +36,13 @@ object ProtocolRegistry {
                         val config = gson.fromJson(reader, ProtocolPluginJson::class.java)
                         reader.close()
                         
-                        if (config != null && config.providerId.isNotBlank()) {
-                            protocols[config.providerId] = { DynamicApiService(config) }
-                            pluginConfigs[config.providerId] = config
+                        if (config?.providerInfo?.id?.isNotBlank() == true) {
+                            protocols[config.providerInfo.id] = { DynamicApiService(config) }
+                            pluginConfigs[config.providerInfo.id] = config
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
+                        // Safe isolation: skip this malformed JSON and continue
                     }
                 }
             }
@@ -66,7 +61,25 @@ object ProtocolRegistry {
         return factory()
     }
 
+    /**
+     * Safely retrieves the plugin config. If the config is missing (e.g. JSON deleted),
+     * it generates a dummy "Orphan" config to prevent NPE crashes in the UI/ViewModel.
+     */
+    fun getConfigSafe(providerName: String): ProtocolPluginJson {
+        return pluginConfigs[providerName] ?: ProtocolPluginJson(
+            providerInfo = ProviderInfo(
+                id = providerName,
+                displayName = "[协议丢失] $providerName",
+                baseUrl = "",
+                isOpenAiCompatible = false
+            ),
+            featureReasoning = FeatureReasoning(supported = false),
+            featureCache = FeatureCache(supported = false)
+        )
+    }
+
+    // Deprecated: Migrating to getConfigSafe
     fun getCapabilities(providerName: String): List<String> {
-        return pluginConfigs[providerName]?.capabilities ?: emptyList()
+        return emptyList()
     }
 }

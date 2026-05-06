@@ -16,7 +16,13 @@ interface ApiService {
     /**
      * A simple data class to represent a chunk of the API response.
      */
-    data class ApiResponseChunk(val content: String?, val reasoning: String?)
+    data class ApiResponseChunk(
+        val content: String?, 
+        val reasoning: String?,
+        val inputTokens: Int? = null,
+        val outputTokens: Int? = null,
+        val cacheHitTokens: Int? = null
+    )
 
     /**
      * Sends a list of messages to the API and returns a flow of response chunks.

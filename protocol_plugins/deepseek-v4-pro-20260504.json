@@ -1,0 +1,45 @@
+{
+  "provider_info": {
+    "id": "deepseek-v4-pro-2026",
+    "display_name": "DeepSeek V4 Pro (Reasoning)",
+    "base_url": "https://api.deepseek.com/v1",
+    "is_openai_compatible": true
+  },
+  "feature_reasoning": {
+    "supported": true,
+    "trigger_type": "extra_body",
+    "trigger_payload": {
+      "thinking": {
+        "type": "enabled"
+      }
+    },
+    "response_field": "reasoning_content",
+    "allows_temperature": false
+  },
+  "feature_cache": {
+    "supported": true,
+    "strategy": "implicit_prefix",
+    "minimum_tokens_to_trigger": 64
+  },
+  "feature_vision": {
+    "supported": false
+  },
+  "feature_roles": {
+    "system_role_name": "system",
+    "supports_system_role": true
+  },
+  "feature_streaming": {
+    "supported": true
+  },
+  "billing_metadata": {
+    "input_price_per_1m": 1.0,
+    "output_price_per_1m": 2.0,
+    "cache_hit_price_per_1m": 0.1
+  },
+  "constraints": {
+    "max_input_tokens": 128000,
+    "max_output_tokens": 8192,
+    "requests_per_minute_limit": 60,
+    "context_window_safe_threshold": 0.95
+  }
+}
