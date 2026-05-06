@@ -57,7 +57,7 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
 
     suspend fun exportApiConfigsToUri(uri: Uri, json: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            context.contentResolver.openOutputStream(uri)?.use { it.writer().write(json) }
+            context.contentResolver.openOutputStream(uri)?.writer(Charsets.UTF_8)?.use { it.write(json) }
                 ?: throw Exception("Failed to open output stream")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -100,7 +100,7 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
 
     suspend fun exportChatHistoryToUri(uri: Uri, json: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            context.contentResolver.openOutputStream(uri)?.use { it.writer().write(json) }
+            context.contentResolver.openOutputStream(uri)?.writer(Charsets.UTF_8)?.use { it.write(json) }
                 ?: throw Exception("Failed to open output stream")
             Result.success(Unit)
         } catch (e: Exception) {
