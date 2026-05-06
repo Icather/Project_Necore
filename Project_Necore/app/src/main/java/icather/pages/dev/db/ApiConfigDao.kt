@@ -11,6 +11,9 @@ interface ApiConfigDao {
     @Insert
     suspend fun insert(apiConfig: ApiConfig)
 
+    @androidx.room.Update
+    suspend fun update(apiConfig: ApiConfig)
+
     @Insert
     suspend fun insertAll(apiConfigs: List<ApiConfig>)
 

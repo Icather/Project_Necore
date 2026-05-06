@@ -8,6 +8,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -49,9 +52,22 @@ fun ChatScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text(uiState.title.ifEmpty { "Project Necore" }) },
+            CenterAlignedTopAppBar(
+                title = { 
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(uiState.title.ifEmpty { "Project Necore" }, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground) 
+                        val activeConfig = uiState.activeApiConfig
+                        if (activeConfig != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(activeConfig.modelName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(Icons.Filled.Menu, contentDescription = "Menu")
@@ -59,12 +75,14 @@ fun ChatScreen(
                 },
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        Icon(Icons.Filled.AddCircleOutline, contentDescription = "New Chat/Settings") // Using add icon as per screenshot top right
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -78,32 +96,36 @@ fun ChatScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 16.dp),
                 state = listState,
-                contentPadding = PaddingValues(vertical = 8.dp)
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 items(uiState.messages) { message ->
-                    ChatMessageItem(message = message)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    ChatMessageItem(message = message, protocol = uiState.activeProtocol)
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
 
-            // Input Area
-            Card(
+            // DeepSeek Style Floating Input Card
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                    .windowInsetsPadding(WindowInsets.ime),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 4.dp,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
                 ) {
+                    // Attachments row
                     if (uiState.attachedImages.isNotEmpty() || uiState.attachedFiles.isNotEmpty()) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .padding(bottom = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             uiState.attachedImages.forEach { uri ->
@@ -113,85 +135,104 @@ fun ChatScreen(
                                 Chip(text = "File", onRemove = { viewModel.removeAttachment(uri, false) })
                             }
                         }
-                        Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     }
 
-                    TextField(
+                    // Input Field (Top part of card)
+                    BasicTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 100.dp),
-                        placeholder = { Text("Type a message...") },
-                        maxLines = 5,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(
-                            onSend = {
-                                if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
-                                    viewModel.sendMessage(inputText)
-                                    inputText = ""
-                                }
+                            .heightIn(min = 40.dp, max = 150.dp)
+                            .padding(vertical = 8.dp),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        decorationBox = { innerTextField ->
+                            if (inputText.isEmpty()) {
+                                Text("发消息或按住说话", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), style = MaterialTheme.typography.bodyLarge)
                             }
-                        )
+                            innerTextField()
+                        },
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Default)
                     )
 
-                    if (uiState.activeProtocol?.featureReasoning?.supported == true) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 0.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "思考模式 (思维链)", 
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Switch(
-                                checked = uiState.isThinkingModeEnabled,
-                                onCheckedChange = { viewModel.toggleThinkingMode(it) },
-                                modifier = Modifier.scale(0.8f) // Make it a bit smaller
-                            )
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
 
+                    // Bottom Row: Pills (Left) and Actions (Right)
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        TextButton(
-                            onClick = onModelSelectorClick,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            val activeConfig = uiState.activeApiConfig
-                            val text = if (activeConfig != null) "${activeConfig.provider} | ${activeConfig.modelName}" else "Select Model"
-                            Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        
-                        IconButton(onClick = onImageUploadClick) {
-                            Icon(Icons.Filled.Image, contentDescription = "Upload Image")
-                        }
-                        IconButton(onClick = onFileUploadClick) {
-                            Icon(Icons.Filled.AttachFile, contentDescription = "Upload File")
-                        }
-                        IconButton(
-                            onClick = {
-                                if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
-                                    viewModel.sendMessage(inputText)
-                                    inputText = ""
+                        // Left: Mode Pills
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (uiState.activeProtocol?.featureReasoning?.supported == true) {
+                                val isThinking = uiState.isThinkingModeEnabled
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (isThinking) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent,
+                                    border = BorderStroke(1.dp, if (isThinking) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant),
+                                    modifier = Modifier.height(32.dp).clickable { viewModel.toggleThinkingMode(!isThinking) }
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                        Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("深度思考", style = MaterialTheme.typography.labelMedium, color = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
-                        ) {
-                            Icon(Icons.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
+
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = Color.Transparent,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+                                modifier = Modifier.height(32.dp).clickable { onModelSelectorClick() }
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                    Icon(Icons.Filled.Language, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(uiState.activeApiConfig?.provider ?: "模型", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+
+                        // Right: Actions (+, Voice/Send)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface),
+                                color = Color.Transparent,
+                                modifier = Modifier.size(28.dp).clickable { onImageUploadClick() }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Filled.Add, contentDescription = "Add", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
+
+                            if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp).clickable {
+                                        viewModel.sendMessage(inputText)
+                                        inputText = ""
+                                    }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Filled.ArrowUpward, contentDescription = "Send", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimary)
+                                    }
+                                }
+                            } else {
+                                Surface(
+                                    shape = CircleShape,
+                                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.onSurface),
+                                    color = Color.Transparent,
+                                    modifier = Modifier.size(28.dp).clickable { /* Voice Input Placeholder */ }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Filled.Mic, contentDescription = "Voice", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurface)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -201,46 +242,50 @@ fun ChatScreen(
 }
 
 @Composable
-fun ChatMessageItem(message: ChatMessage) {
+fun ChatMessageItem(message: ChatMessage, protocol: icather.pages.dev.api.plugin.ProtocolPluginJson?) {
     val isUser = message.isUser
-    val alignment = if (isUser) Alignment.End else Alignment.Start
-    val backgroundColor = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    val shape = if (isUser) {
-        RoundedCornerShape(16.dp, 16.dp, 0.dp, 16.dp)
-    } else {
-        RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp)
-    }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = alignment
-    ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 300.dp)
-                .clip(shape)
-                .background(backgroundColor)
-                .padding(12.dp)
+    
+    if (isUser) {
+        // DeepSeek User Message Style: Gray pill, right aligned
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.End
         ) {
-            if (isUser) {
-                Text(text = message.text, color = contentColor)
-            } else {
-                // If it contains <font> tag (reasoning), we might need custom parsing, 
-                // but for now MarkdownText handles standard markdown beautifully.
-                // We'll clean up the reasoning tags slightly for markdown if needed, 
-                // or just let MarkdownText render it (it supports some HTML).
+            Surface(
+                modifier = Modifier.widthIn(max = 280.dp),
+                shape = RoundedCornerShape(20.dp, 20.dp, 4.dp, 20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                shadowElevation = 0.dp
+            ) {
+                Text(
+                    text = message.text, 
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    color = MaterialTheme.colorScheme.onSurface, 
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+    } else {
+        // DeepSeek Assistant Message Style: No background, left aligned, icon prefix
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                Icons.Filled.AutoAwesome, // Sparkle icon for AI
+                contentDescription = "AI",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp).padding(top = 2.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 MarkdownText(
                     markdown = message.text,
-                    color = contentColor
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 
                 if (message.inputTokens != null || message.outputTokens != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val hitText = if (message.cacheHitTokens != null && message.inputTokens != null && message.inputTokens > 0) {
-                        val hitRate = (message.cacheHitTokens.toDouble() / message.inputTokens) * 100
-                        String.format(" (命中率: %.1f%%)", hitRate)
-                    } else ""
+                    Spacer(modifier = Modifier.height(6.dp))
                     
                     val formatTokens: (Int) -> String = { count ->
                         when {
@@ -250,15 +295,24 @@ fun ChatMessageItem(message: ChatMessage) {
                         }
                     }
                     
-                    val inputStr = message.inputTokens?.let { "📥 输入: ${formatTokens(it)}$hitText" } ?: ""
-                    val outputStr = message.outputTokens?.let { "📤 输出: ${formatTokens(it)}" } ?: ""
-                    val separator = if (inputStr.isNotEmpty() && outputStr.isNotEmpty()) "  |  " else ""
+                    val inputStr = message.inputTokens?.let { "上下文 ${formatTokens(it)}" } ?: ""
+                    val outputStr = message.outputTokens?.let { "输出 ${formatTokens(it)}" } ?: ""
+                    val separator = if (inputStr.isNotEmpty() && outputStr.isNotEmpty()) " · " else ""
+                    
+                    val billing = protocol?.billingMetadata
+                    var costStr = ""
+                    if (billing != null && message.inputTokens != null && message.outputTokens != null) {
+                        val cacheCount = message.cacheHitTokens ?: 0
+                        val inputCount = message.inputTokens - cacheCount
+                        val outputCount = message.outputTokens
+                        val cost = (inputCount * billing.inputPricePer1m + cacheCount * billing.cacheHitPricePer1m + outputCount * billing.outputPricePer1m) / 1_000_000.0
+                        if (cost > 0) costStr = String.format(" · ￥%.4f", cost)
+                    }
                     
                     Text(
-                        text = "$inputStr$separator$outputStr",
+                        text = "$inputStr$separator$outputStr$costStr",
                         style = MaterialTheme.typography.labelSmall,
-                        color = contentColor.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(top = 4.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
             }

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -66,6 +67,7 @@ fun ApiConfigScreen(
                     config = config,
                     isActive = config.id == uiState.activeConfigId,
                     onClick = { viewModel.setActiveConfig(config.id) },
+                    onEdit = { viewModel.setConfigToEdit(config) },
                     onDelete = { viewModel.deleteConfig(config) }
                 )
             }
@@ -73,9 +75,19 @@ fun ApiConfigScreen(
 
         if (uiState.showAddDialog) {
             AddApiDialog(
+                configToEdit = uiState.configToEdit,
                 onDismiss = { viewModel.setShowAddDialog(false) },
                 onSave = { provider, model, name, key ->
-                    viewModel.addConfig(provider, model, name, key)
+                    if (uiState.configToEdit != null) {
+                        viewModel.updateConfig(uiState.configToEdit!!.copy(
+                            provider = provider,
+                            modelName = model,
+                            name = name,
+                            apiKey = key
+                        ))
+                    } else {
+                        viewModel.addConfig(provider, model, name, key)
+                    }
                 },
                 onNavigateToPlugins = onNavigateToPlugins
             )
@@ -88,6 +100,7 @@ fun ApiConfigItem(
     config: ApiConfig,
     isActive: Boolean,
     onClick: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -124,8 +137,11 @@ fun ApiConfigItem(
                     Icons.Filled.CheckCircle,
                     contentDescription = "Active",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 16.dp)
+                    modifier = Modifier.padding(end = 8.dp)
                 )
+            }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
@@ -137,16 +153,17 @@ fun ApiConfigItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddApiDialog(
+    configToEdit: ApiConfig?,
     onDismiss: () -> Unit,
     onSave: (provider: String, model: String, name: String, key: String) -> Unit,
     onNavigateToPlugins: () -> Unit
 ) {
     val providers = ProtocolRegistry.getProtocolNames()
     var expanded by remember { mutableStateOf(false) }
-    var selectedProvider by remember { mutableStateOf(providers.firstOrNull() ?: "") }
-    var modelName by remember { mutableStateOf("") }
-    var displayName by remember { mutableStateOf("") }
-    var apiKey by remember { mutableStateOf("") }
+    var selectedProvider by remember { mutableStateOf(configToEdit?.provider ?: (providers.firstOrNull() ?: "")) }
+    var modelName by remember { mutableStateOf(configToEdit?.modelName ?: "") }
+    var displayName by remember { mutableStateOf(configToEdit?.name ?: "") }
+    var apiKey by remember { mutableStateOf(configToEdit?.apiKey ?: "") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -159,7 +176,7 @@ fun AddApiDialog(
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Add API Configuration", style = MaterialTheme.typography.headlineSmall)
+                Text(if (configToEdit != null) "Edit API Configuration" else "Add API Configuration", style = MaterialTheme.typography.headlineSmall)
 
                 // Provider Dropdown
                 ExposedDropdownMenuBox(

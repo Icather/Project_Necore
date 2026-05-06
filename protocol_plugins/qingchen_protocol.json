@@ -1,0 +1,29 @@
+{
+  "provider_info": {
+    "id": "QingchenCloud",
+    "display_name": "晴辰云",
+    "base_url": "https://gpt.qt.cool/v1",
+    "is_openai_compatible": true
+  },
+  "feature_reasoning": {
+    "supported": true,
+    "response_field": "reasoning_content"
+  },
+  "feature_roles": {
+    "system_role_name": "system",
+    "supports_system_role": true
+  },
+  "feature_streaming": {
+    "supported": true
+  },
+  "billing_metadata": {
+    "input_price_per_1m": 1.0,
+    "output_price_per_1m": 2.0,
+    "cache_hit_price_per_1m": 0.1
+  },
+  "constraints": {
+    "max_input_tokens": 128000,
+    "max_output_tokens": 8192,
+    "context_window_safe_threshold": 0.95
+  }
+}

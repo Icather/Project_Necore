@@ -41,6 +41,10 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
         db.apiConfigDao().insert(config)
     }
 
+    suspend fun updateApiConfig(config: ApiConfig) = withContext(Dispatchers.IO) {
+        db.apiConfigDao().update(config)
+    }
+
     suspend fun deleteApiConfig(config: ApiConfig) = withContext(Dispatchers.IO) {
         db.apiConfigDao().deleteById(config.id)
     }

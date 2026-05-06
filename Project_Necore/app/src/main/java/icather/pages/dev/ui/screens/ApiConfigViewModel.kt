@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
 data class ApiConfigUiState(
     val configs: List<ApiConfig> = emptyList(),
     val activeConfigId: Long = -1L,
-    val showAddDialog: Boolean = false
+    val showAddDialog: Boolean = false,
+    val configToEdit: ApiConfig? = null
 )
 
 class ApiConfigViewModel(private val repository: SettingsRepository) : ViewModel() {
@@ -53,6 +54,13 @@ class ApiConfigViewModel(private val repository: SettingsRepository) : ViewModel
 
     fun setShowAddDialog(show: Boolean) {
         _uiState.update { it.copy(showAddDialog = show) }
+        if (!show) {
+            _uiState.update { it.copy(configToEdit = null) }
+        }
+    }
+
+    fun setConfigToEdit(config: ApiConfig?) {
+        _uiState.update { it.copy(configToEdit = config, showAddDialog = true) }
     }
 
     fun addConfig(provider: String, modelName: String, displayName: String, apiKey: String) {
@@ -65,6 +73,13 @@ class ApiConfigViewModel(private val repository: SettingsRepository) : ViewModel
                     apiKey = apiKey
                 )
             )
+            setShowAddDialog(false)
+        }
+    }
+
+    fun updateConfig(config: ApiConfig) {
+        viewModelScope.launch {
+            repository.updateApiConfig(config)
             setShowAddDialog(false)
         }
     }
