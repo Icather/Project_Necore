@@ -86,9 +86,23 @@ class ChatViewModel(
 
     fun addAttachments(uris: List<Uri>, isImage: Boolean) {
         if (isImage) {
-            val current = _uiState.value.attachedImages.toMutableList()
-            current.addAll(uris)
-            _uiState.value = _uiState.value.copy(attachedImages = current)
+            viewModelScope.launch {
+                val compressionEnabled = repository.isImageCompressionEnabled()
+
+                if (!compressionEnabled) {
+                    // D2: 未开启压缩 — 校验总大小不超过 20MB
+                    val totalSize = uris.sumOf { icather.pages.dev.util.ImageCompressor.getFileSize(repository.getContext(), it) }
+                    val existingSize = _uiState.value.attachedImages.sumOf { icather.pages.dev.util.ImageCompressor.getFileSize(repository.getContext(), it) }
+                    if (totalSize + existingSize > icather.pages.dev.util.ImageCompressor.MAX_TOTAL_RAW_SIZE_BYTES) {
+                        addMessageToView(ChatMessage("⚠️ 图片总大小超出 20MB 限制，请开启图片压缩或减少图片数量。", false))
+                        return@launch
+                    }
+                }
+                // 无论是否压缩，先添加 Uri 到列表（压缩将在实际发送时执行）
+                val current = _uiState.value.attachedImages.toMutableList()
+                current.addAll(uris)
+                _uiState.value = _uiState.value.copy(attachedImages = current)
+            }
         } else {
             val current = _uiState.value.attachedFiles.toMutableList()
             current.addAll(uris)
@@ -226,7 +240,7 @@ class ChatViewModel(
         }
 
         val aiMessageIndex = _uiState.value.messages.size
-        addMessageToView(ChatMessage("", false, isHtml = true))
+        addMessageToView(ChatMessage("", false, isHtml = true, isStreaming = true))
 
         val finalContent = StringBuilder()
         val finalReasoning = StringBuilder()
@@ -235,6 +249,12 @@ class ChatViewModel(
         var finalCacheHitTokens: Int? = null
         
         val options = mapOf("thinking_mode" to _uiState.value.isThinkingModeEnabled)
+
+        // D1: 高频重绘节流阀 — 50ms 时间采样
+        // 大模型每秒吐 50+ 个 chunk，如果逐个刷新 UI 会导致严重 Jank。
+        // 这里只在距上次刷新 ≥50ms 时才推送 UI 更新（≈20fps），人眼无感但 Compose 压力降 80%。
+        var lastUiUpdateTime = 0L
+        val uiThrottleMs = 50L
 
         repository.getCompletion(service, apiMessages, apiKey, options)
             .catch { e ->
@@ -257,11 +277,20 @@ class ChatViewModel(
                 if (chunk.outputTokens != null) finalOutputTokens = chunk.outputTokens
                 if (chunk.cacheHitTokens != null) finalCacheHitTokens = chunk.cacheHitTokens
 
-                val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
-                val displayText = reasoningText + finalContent.toString()
-                
-                updateMessageAt(aiMessageIndex, displayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens)
+                // D1: 节流阀 — 只在超过间隔时才推送 UI
+                val now = System.currentTimeMillis()
+                if (now - lastUiUpdateTime >= uiThrottleMs) {
+                    lastUiUpdateTime = now
+                    val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
+                    val displayText = reasoningText + finalContent.toString()
+                    updateMessageAt(aiMessageIndex, displayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = true)
+                }
             }
+
+        // D1: 流结束 — 最终全量刷新 + 关闭 isStreaming 标记
+        val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
+        val finalDisplayText = reasoningText + finalContent.toString()
+        updateMessageAt(aiMessageIndex, finalDisplayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = false)
 
         val dbMessageText = if (finalReasoning.isNotEmpty()) {
             "<font color='#999999'>${finalReasoning}</font><br>${finalContent}"
@@ -286,11 +315,12 @@ class ChatViewModel(
         _uiState.value = _uiState.value.copy(messages = current)
     }
 
-    private fun updateMessageAt(index: Int, text: String, inputTokens: Int? = null, outputTokens: Int? = null, cacheHitTokens: Int? = null) {
+    private fun updateMessageAt(index: Int, text: String, inputTokens: Int? = null, outputTokens: Int? = null, cacheHitTokens: Int? = null, isStreaming: Boolean = false) {
         val current = _uiState.value.messages.toMutableList()
         if (index < current.size) {
             current[index] = current[index].copy(
                 text = text,
+                isStreaming = isStreaming,
                 inputTokens = inputTokens,
                 outputTokens = outputTokens,
                 cacheHitTokens = cacheHitTokens

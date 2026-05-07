@@ -95,6 +95,40 @@ fun SettingsScreen(
                     )
                     HorizontalDivider()
                 }
+                // D2: 图片压缩开关
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Image,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "图片自动压缩",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (uiState.isImageCompressionEnabled) "已开启 · 自动压缩至安全分辨率" else "已关闭 · 限制总大小 20MB",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = uiState.isImageCompressionEnabled,
+                            onCheckedChange = { viewModel.setImageCompressionEnabled(it) }
+                        )
+                    }
+                    HorizontalDivider()
+                }
                 item {
                     SettingsItem(
                         icon = Icons.Filled.Upload,

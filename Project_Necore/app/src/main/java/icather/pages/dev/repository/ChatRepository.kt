@@ -17,6 +17,12 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
 
     private val prefs = context.getSharedPreferences("api_prefs", Context.MODE_PRIVATE)
 
+    fun isImageCompressionEnabled(): Boolean {
+        return prefs.getBoolean("image_compression_enabled", true)
+    }
+
+    fun getContext(): Context = context
+
     fun getAllApiConfigs(): Flow<List<ApiConfig>> {
         return db.apiConfigDao().getAll().flowOn(Dispatchers.IO)
     }

@@ -7,6 +7,7 @@ data class ChatMessage(
     val text: String,
     val isUser: Boolean,
     val isHtml: Boolean = false,
+    val isStreaming: Boolean = false,
     val inputTokens: Int? = null,
     val outputTokens: Int? = null,
     val cacheHitTokens: Int? = null

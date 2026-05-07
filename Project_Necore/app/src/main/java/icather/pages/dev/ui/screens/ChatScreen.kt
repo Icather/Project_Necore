@@ -279,10 +279,21 @@ fun ChatMessageItem(message: ChatMessage, protocol: icather.pages.dev.api.plugin
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                MarkdownText(
-                    markdown = message.text,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                // D1: 惰性渲染 — 流式阶段使用轻量 Text()，流结束后切换 MarkdownText()
+                // MarkdownText 需要解析 Markdown AST，在高频重组时开销巨大。
+                // 流式阶段直接用原生 Text() 显示纯文本，避免每帧都重新解析语法树。
+                if (message.isStreaming) {
+                    Text(
+                        text = message.text,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                } else {
+                    MarkdownText(
+                        markdown = message.text,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 
                 if (message.inputTokens != null || message.outputTokens != null) {
                     Spacer(modifier = Modifier.height(6.dp))

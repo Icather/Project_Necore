@@ -22,9 +22,18 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
 
     companion object {
         const val DEFAULT_API_ID = 1L
+        private const val KEY_IMAGE_COMPRESSION = "image_compression_enabled"
     }
 
     fun getAllApiConfigs() = db.apiConfigDao().getAll()
+
+    fun isImageCompressionEnabled(): Boolean {
+        return prefs.getBoolean(KEY_IMAGE_COMPRESSION, true) // 默认开启
+    }
+
+    fun setImageCompressionEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_IMAGE_COMPRESSION, enabled).apply()
+    }
 
     val activeApiConfigId: kotlinx.coroutines.flow.Flow<Long> = kotlinx.coroutines.flow.flow {
         while (true) {

@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val isLoading: Boolean = false,
+    val isImageCompressionEnabled: Boolean = true
 )
 
 sealed class SettingsEvent {
@@ -29,6 +30,17 @@ class SettingsViewModel(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    init {
+        _uiState.value = _uiState.value.copy(
+            isImageCompressionEnabled = repository.isImageCompressionEnabled()
+        )
+    }
+
+    fun setImageCompressionEnabled(enabled: Boolean) {
+        repository.setImageCompressionEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isImageCompressionEnabled = enabled)
+    }
 
     private val _events = MutableSharedFlow<SettingsEvent>()
     val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
