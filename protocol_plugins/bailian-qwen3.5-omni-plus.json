@@ -1,0 +1,50 @@
+{
+  "provider_info": {
+    "id": "qwen3.5-omni-plus",
+    "display_name": "千问 Qwen3.5-Omni-Plus (百炼)",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "is_openai_compatible": true
+  },
+  "feature_reasoning": {
+    "supported": true,
+    "trigger_type": "extra_body",
+    "trigger_payload": {"enable_thinking": true},
+    "response_field": "reasoning_content",
+    "allows_temperature": true
+  },
+  "feature_cache": {
+    "supported": false
+  },
+  "feature_vision": {
+    "supported": true,
+    "max_images_per_request": 250,
+    "detail_control_supported": false,
+    "input_format": "base64"
+  },
+  "feature_tools": {
+    "supported": true,
+    "strict_mode_supported": false,
+    "parallel_tool_calls_supported": false
+  },
+  "feature_structured_output": {
+    "json_mode_supported": false,
+    "requires_json_keyword_in_prompt": false
+  },
+  "feature_roles": {
+    "system_role_name": "system",
+    "supports_system_role": true
+  },
+  "feature_streaming": {
+    "supported": true
+  },
+  "billing_metadata": {
+    "input_price_per_1m": 3.0,
+    "output_price_per_1m": 12.0,
+    "cache_hit_price_per_1m": 0.0
+  },
+  "constraints": {
+    "max_input_tokens": 131072,
+    "max_output_tokens": 8192,
+    "context_window_safe_threshold": 0.95
+  }
+}

@@ -49,8 +49,52 @@
 
 ## 5. API 提供商规范与知识库
 
-基于 JSON 动态协议加载架构，本项目旨在无缝接入国内大模型生态：
-**待适配清单**: DeepSeek, SiliconFlow(硅基流动), Zhipu AI(智谱), Moonshot AI(Kimi), 阿里通义, 百度千帆, 字节火山引擎等。
+基于 JSON 动态协议加载架构，本项目旨在无缝接入国内外大模型生态。
+
+> **排序规则**：中文名提供商按拼音首字母排序在前，英文名按字母顺序排后。
+> **数据来源**：[阿里云百炼模型广场](https://help.aliyun.com/zh/model-studio/getting-started/models)（`base_url: https://dashscope.aliyuncs.com/compatible-mode/v1`）及各官方直连 API。
+
+### 5.0 待适配提供商与模型清单
+
+#### 聚合平台
+
+- `[x]` **晴辰云** (QingchenCloud) — `qingchen_protocol.json`
+  - 第三方 OpenAI 兼容代理，转发多家模型
+
+#### 阿里云百炼平台 (Alibaba Bailian / DashScope)
+
+百炼平台提供统一的 OpenAI 兼容接口，以下按**模型家族**分类：
+
+**千问系列 (Qwen)**
+- `[x]` Qwen3.6-Max-Preview — `bailian-qwen3.6-max-preview.json`
+- `[x]` Qwen3.6-Plus — `bailian-qwen3.6-plus.json`
+- `[x]` Qwen3.6-Flash — `bailian-qwen3.6-flash.json`
+- `[x]` Qwen3.5-Omni-Plus — `bailian-qwen3.5-omni-plus.json` (多模态：文本/图像)
+- `[x]` QwQ-Plus — `bailian-qwq-plus.json` (深度推理模型)
+
+**DeepSeek 系列 (百炼转发)**
+- `[x]` DeepSeek-V4-Pro (百炼版) — `bailian-deepseek-v4-pro.json`
+- `[x]` DeepSeek-V4-Flash — `bailian-deepseek-v4-flash.json`
+
+**Kimi 系列 (Moonshot AI)**
+- `[x]` Kimi-K2.6 — `bailian-kimi-k2.6.json`
+
+**GLM 系列 (智谱清言 / Zhipu AI)**
+- `[x]` GLM-5.1 — `bailian-glm-5.1.json`
+
+**MiniMax 系列**
+- `[x]` MiniMax-M2.5 — `bailian-MiniMax-M2.5.json`
+- `[ ]` MiniMax/Speech-2.8-HD — 语音合成
+
+#### 官方直连 API（非百炼转发）
+
+- `[ ]` 百度千帆 (Baidu Qianfan / ERNIE)
+- `[ ]` 硅基流动 (SiliconFlow)
+- `[ ]` 字节火山引擎 (ByteDance Volcengine / 豆包)
+- `[x]` DeepSeek 官方 (`api.deepseek.com`) — `deepseek-v4-pro-20260504.json`
+- `[ ]` Anthropic (Claude)
+- `[ ]` Google (Gemini)
+- `[ ]` OpenAI (GPT / o-series)
 
 ### 5.1 插件文件命名规范
 **格式**: `[提供商]-[模型名称(可选)]-[最后修改日期(yyyyMMdd)].json` (示例: `deepseek-v4-pro-20260504.json`)

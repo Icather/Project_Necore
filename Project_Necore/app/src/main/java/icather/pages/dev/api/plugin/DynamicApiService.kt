@@ -2,7 +2,9 @@ package icather.pages.dev.api.plugin
 
 import android.net.Uri
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializer
 import icather.pages.dev.api.ApiService
 import kotlinx.coroutines.flow.Flow
@@ -27,12 +29,46 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
         val extraPayload: JsonObject? = null
     )
 
+    // ===== MessageContent 多态序列化器 =====
+    // 遵循第零法则：密封类 when 穷举，编译期保证不遗漏。
+    private fun serializeMessageContent(content: ApiService.MessageContent): com.google.gson.JsonElement {
+        return when (content) {
+            is ApiService.MessageContent.Text -> JsonPrimitive(content.text)
+            is ApiService.MessageContent.Multimodal -> JsonArray().apply {
+                content.parts.forEach { part ->
+                    add(when (part) {
+                        is ApiService.ContentPart.TextPart -> JsonObject().apply {
+                            addProperty("type", "text")
+                            addProperty("text", part.text)
+                        }
+                        is ApiService.ContentPart.ImagePart -> JsonObject().apply {
+                            addProperty("type", "image_url")
+                            add("image_url", JsonObject().apply {
+                                addProperty("url", part.base64DataUrl)
+                            })
+                        }
+                    })
+                }
+            }
+        }
+    }
+
     // B3: 零开销请求拼接引擎 (Zero-overhead parameter injection)
     private val gson = GsonBuilder()
-        .registerTypeAdapter(DynamicApiRequest::class.java, JsonSerializer<DynamicApiRequest> { src, _, context ->
+        .registerTypeAdapter(DynamicApiRequest::class.java, JsonSerializer<DynamicApiRequest> { src, _, _ ->
             val jsonObj = JsonObject()
             jsonObj.addProperty("model", src.model)
-            jsonObj.add("messages", context.serialize(src.messages))
+
+            // 手动序列化 messages 数组，支持 MessageContent 多态
+            val messagesArray = JsonArray()
+            src.messages.forEach { msg ->
+                val msgObj = JsonObject()
+                msgObj.addProperty("role", msg.role)
+                msgObj.add("content", serializeMessageContent(msg.content))
+                messagesArray.add(msgObj)
+            }
+            jsonObj.add("messages", messagesArray)
+
             jsonObj.addProperty("stream", src.stream)
             src.temperature?.let { jsonObj.addProperty("temperature", it) }
             
@@ -51,7 +87,6 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
 
     override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any>): Flow<ApiService.ApiResponseChunk> = flow {
         val providerInfo = config.providerInfo ?: throw IllegalStateException("Provider info is missing")
-        val modelName = providerInfo.displayName // Or actual model ID if we add it to schema
         
         // B3: 角色映射 (Role Mapping)
         val systemRole = config.featureRoles?.systemRoleName ?: "system"

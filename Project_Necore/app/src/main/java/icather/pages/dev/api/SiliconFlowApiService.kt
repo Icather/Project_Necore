@@ -1,7 +1,11 @@
 package icather.pages.dev.api
 
 import android.net.Uri
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.MediaType.Companion.toMediaType
@@ -13,7 +17,6 @@ import java.util.concurrent.TimeUnit
 class SiliconFlowApiService : ApiService {
 
     private val client = OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build()
-    private val gson = Gson()
 
     // Data classes specific to SiliconFlow's API
     private data class SiliconFlowApiRequest(val model: String, val messages: List<ApiService.ApiMessage>, val stream: Boolean)
@@ -21,6 +24,36 @@ class SiliconFlowApiService : ApiService {
     private data class SiliconFlowApiStreamChoice(val delta: SiliconFlowStreamDelta)
     private data class SiliconFlowStreamDelta(val content: String?, val reasoning_content: String?)
     private data class SiliconFlowUsage(val prompt_tokens: Int?, val completion_tokens: Int?)
+
+    // MessageContent 序列化：SiliconFlow 是纯文本模型，只处理 Text 类型
+    private val gson = GsonBuilder()
+        .registerTypeAdapter(SiliconFlowApiRequest::class.java, JsonSerializer<SiliconFlowApiRequest> { src, _, _ ->
+            val jsonObj = JsonObject()
+            jsonObj.addProperty("model", src.model)
+
+            val messagesArray = JsonArray()
+            src.messages.forEach { msg ->
+                val msgObj = JsonObject()
+                msgObj.addProperty("role", msg.role)
+                // 密封类穷举序列化
+                val contentJson = when (val c = msg.content) {
+                    is ApiService.MessageContent.Text -> JsonPrimitive(c.text)
+                    is ApiService.MessageContent.Multimodal -> {
+                        // SiliconFlow 不支持多模态，回退为拼接纯文本
+                        val textOnly = c.parts.filterIsInstance<ApiService.ContentPart.TextPart>()
+                            .joinToString("\n") { it.text }
+                        JsonPrimitive(textOnly)
+                    }
+                }
+                msgObj.add("content", contentJson)
+                messagesArray.add(msgObj)
+            }
+            jsonObj.add("messages", messagesArray)
+
+            jsonObj.addProperty("stream", src.stream)
+            jsonObj
+        })
+        .create()
 
     override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any>): Flow<ApiService.ApiResponseChunk> = flow {
         val requestBody = SiliconFlowApiRequest("deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", messages, true)

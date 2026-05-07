@@ -1,6 +1,7 @@
 package icather.pages.dev.chat
 
 import android.net.Uri
+import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -9,6 +10,7 @@ import icather.pages.dev.api.ApiService
 import icather.pages.dev.db.ApiConfig
 import icather.pages.dev.repository.ChatRepository
 import icather.pages.dev.api.plugin.ProtocolRegistry
+import icather.pages.dev.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -233,11 +235,42 @@ class ChatViewModel(
         // B1: 思考链 (Reasoning) 清洗器
         // Strip the reasoning block completely so it doesn't pollute the prompt context.
         // We use DOT_MATCHES_ALL to ensure multiline reasoning blocks are cleanly removed.
-        val apiMessages = dbMessages.map { 
+        // 历史消息永远是纯文本（数据库只存文本）
+        val historyMessages = dbMessages.map { 
             val role = if (it.isUser) "user" else "assistant"
             val content = it.text.replace(Regex("<font color='#999999'>.*?</font><br>", RegexOption.DOT_MATCHES_ALL), "")
-            ApiService.ApiMessage(role, content)
+            ApiService.ApiMessage.text(role, content)
+        }.toMutableList()
+
+        // 多模态图片注入：如果有附件图片且模型支持视觉，替换最后一条用户消息为多模态格式
+        val attachedImages = _uiState.value.attachedImages
+        val supportsVision = _uiState.value.activeProtocol?.featureVision?.supported == true
+        if (attachedImages.isNotEmpty() && supportsVision && historyMessages.isNotEmpty()) {
+            val lastMsg = historyMessages.last()
+            if (lastMsg.role == "user") {
+                val lastText = when (val c = lastMsg.content) {
+                    is ApiService.MessageContent.Text -> c.text
+                    is ApiService.MessageContent.Multimodal -> c.parts
+                        .filterIsInstance<ApiService.ContentPart.TextPart>()
+                        .joinToString("\n") { it.text }
+                }
+                // 构建多模态内容：压缩图片 + Base64 编码 + 文本
+                val multimodalContent = ApiService.MessageContent.Multimodal(buildList {
+                    attachedImages.forEach { uri ->
+                        try {
+                            val compressed = ImageCompressor.compress(repository.getContext(), uri)
+                            val b64 = Base64.encodeToString(compressed, Base64.NO_WRAP)
+                            add(ApiService.ContentPart.ImagePart("data:image/jpeg;base64,$b64"))
+                        } catch (e: Exception) {
+                            println("Image compression failed for $uri: ${e.message}")
+                        }
+                    }
+                    add(ApiService.ContentPart.TextPart(lastText))
+                })
+                historyMessages[historyMessages.lastIndex] = ApiService.ApiMessage("user", multimodalContent)
+            }
         }
+        val apiMessages = historyMessages
 
         val aiMessageIndex = _uiState.value.messages.size
         addMessageToView(ChatMessage("", false, isHtml = true, isStreaming = true))
