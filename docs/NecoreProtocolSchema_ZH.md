@@ -117,19 +117,28 @@
 
 ## 3. 真实厂商映射示例 (Real-World Mapping Examples)
 
-### 3.1 DeepSeek 示例 (`deepseek-v4-pro.json`)
-DeepSeek 依赖隐式缓存，且在开启推理思考模式时严格禁止传入 temperature 参数。
+> **排序规则**：有中文名称的提供商优先，按中文首字拼音字母顺序排列；无中文名的提供商排在后面，按英文字母顺序排列。
+
+### 3.1 晴辰云 示例 (`qingchen_protocol.json`)
+晴辰云是完全兼容 OpenAI 标准的聚合代理服务，支持流式推理但不使用自定义触发载荷，推理内容通过标准 `reasoning_content` 字段返回。
 ```json
 {
+  "provider_info": {
+    "id": "QingchenCloud",
+    "display_name": "晴辰云",
+    "base_url": "https://gpt.qt.cool/v1",
+    "is_openai_compatible": true
+  },
   "feature_reasoning": {
     "supported": true,
-    "trigger_type": "extra_body",
-    "trigger_payload": {"thinking": {"type": "enabled"}},
-    "allows_temperature": false
+    "response_field": "reasoning_content"
   },
-  "feature_cache": {
-    "supported": true,
-    "strategy": "implicit_prefix"
+  "feature_roles": {
+    "system_role_name": "system",
+    "supports_system_role": true
+  },
+  "feature_streaming": {
+    "supported": true
   }
 }
 ```
@@ -146,6 +155,23 @@ Claude 依赖显式缓存控制，并且原生 API 层面并未拆分出专属�
     "strategy": "explicit_ephemeral",
     "explicit_max_breakpoints": 4,
     "explicit_tag_format": {"type": "ephemeral"}
+  }
+}
+```
+
+### 3.3 DeepSeek 示例 (`deepseek-v4-pro.json`)
+DeepSeek 依赖隐式缓存，且在开启推理思考模式时严格禁止传入 temperature 参数。
+```json
+{
+  "feature_reasoning": {
+    "supported": true,
+    "trigger_type": "extra_body",
+    "trigger_payload": {"thinking": {"type": "enabled"}},
+    "allows_temperature": false
+  },
+  "feature_cache": {
+    "supported": true,
+    "strategy": "implicit_prefix"
   }
 }
 ```
