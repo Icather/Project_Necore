@@ -1,0 +1,52 @@
+{
+  "provider_info": {
+    "id": "claude-sonnet-4-20260514",
+    "display_name": "Claude Sonnet 4.6 (Anthropic)",
+    "base_url": "https://api.anthropic.com",
+    "is_openai_compatible": false
+  },
+  "feature_reasoning": {
+    "supported": true,
+    "trigger_type": "extra_body",
+    "trigger_payload": {"thinking": {"type": "enabled", "budget_tokens": 10000}},
+    "response_field": "thinking",
+    "allows_temperature": false
+  },
+  "feature_cache": {
+    "supported": true,
+    "strategy": "explicit_tags",
+    "explicit_tag_format": {"type": "ephemeral"}
+  },
+  "feature_vision": {
+    "supported": true,
+    "max_images_per_request": 20,
+    "detail_control_supported": false,
+    "input_format": "base64"
+  },
+  "feature_tools": {
+    "supported": true,
+    "strict_mode_supported": false,
+    "parallel_tool_calls_supported": true
+  },
+  "feature_structured_output": {
+    "json_mode_supported": false,
+    "requires_json_keyword_in_prompt": false
+  },
+  "feature_roles": {
+    "system_role_name": "system",
+    "supports_system_role": true
+  },
+  "feature_streaming": {
+    "supported": true
+  },
+  "billing_metadata": {
+    "input_price_per_1m": 3.0,
+    "output_price_per_1m": 15.0,
+    "cache_hit_price_per_1m": 0.3
+  },
+  "constraints": {
+    "max_input_tokens": 200000,
+    "max_output_tokens": 64000,
+    "context_window_safe_threshold": 0.95
+  }
+}

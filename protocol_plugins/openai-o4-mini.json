@@ -1,0 +1,52 @@
+{
+  "provider_info": {
+    "id": "o4-mini",
+    "display_name": "o4-mini 推理模型 (OpenAI)",
+    "base_url": "https://api.openai.com/v1",
+    "is_openai_compatible": true
+  },
+  "feature_reasoning": {
+    "supported": true,
+    "trigger_type": "extra_body",
+    "trigger_payload": {"reasoning_effort": "high"},
+    "response_field": "reasoning_content",
+    "allows_temperature": false
+  },
+  "feature_cache": {
+    "supported": true,
+    "strategy": "implicit_prefix",
+    "minimum_tokens_to_trigger": 1024
+  },
+  "feature_vision": {
+    "supported": true,
+    "max_images_per_request": 20,
+    "detail_control_supported": true,
+    "input_format": "base64"
+  },
+  "feature_tools": {
+    "supported": true,
+    "strict_mode_supported": true,
+    "parallel_tool_calls_supported": true
+  },
+  "feature_structured_output": {
+    "json_mode_supported": true,
+    "requires_json_keyword_in_prompt": false
+  },
+  "feature_roles": {
+    "system_role_name": "developer",
+    "supports_system_role": true
+  },
+  "feature_streaming": {
+    "supported": true
+  },
+  "billing_metadata": {
+    "input_price_per_1m": 1.1,
+    "output_price_per_1m": 4.4,
+    "cache_hit_price_per_1m": 0.275
+  },
+  "constraints": {
+    "max_input_tokens": 200000,
+    "max_output_tokens": 100000,
+    "context_window_safe_threshold": 0.95
+  }
+}

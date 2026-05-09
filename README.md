@@ -58,7 +58,7 @@
 
 #### 聚合平台
 
-- `[x]` **晴辰云** (QingchenCloud) — `qingchen_protocol.json`
+- `[x]` **晴辰云** (QingchenCloud) — `qingchen_protocol.json`　_(2026-05-06)_
   - 第三方 OpenAI 兼容代理，转发多家模型
 
 #### 阿里云百炼平台 (Alibaba Bailian / DashScope)
@@ -66,35 +66,35 @@
 百炼平台提供统一的 OpenAI 兼容接口，以下按**模型家族**分类：
 
 **千问系列 (Qwen)**
-- `[x]` Qwen3.6-Max-Preview — `bailian-qwen3.6-max-preview.json`
-- `[x]` Qwen3.6-Plus — `bailian-qwen3.6-plus.json`
-- `[x]` Qwen3.6-Flash — `bailian-qwen3.6-flash.json`
-- `[x]` Qwen3.5-Omni-Plus — `bailian-qwen3.5-omni-plus.json` (多模态：文本/图像)
-- `[x]` QwQ-Plus — `bailian-qwq-plus.json` (深度推理模型)
+- `[x]` Qwen3.6-Max-Preview — `bailian-qwen3.6-max-preview.json`　_(2026-05-07)_
+- `[x]` Qwen3.6-Plus — `bailian-qwen3.6-plus.json`　_(2026-05-07)_
+- `[x]` Qwen3.6-Flash — `bailian-qwen3.6-flash.json`　_(2026-05-07)_
+- `[x]` Qwen3.5-Omni-Plus — `bailian-qwen3.5-omni-plus.json` (多模态：文本/图像)　_(2026-05-07)_
+- `[x]` QwQ-Plus — `bailian-qwq-plus.json` (深度推理模型)　_(2026-05-07)_
 
 **DeepSeek 系列 (百炼转发)**
-- `[x]` DeepSeek-V4-Pro (百炼版) — `bailian-deepseek-v4-pro.json`
-- `[x]` DeepSeek-V4-Flash — `bailian-deepseek-v4-flash.json`
+- `[x]` DeepSeek-V4-Pro (百炼版) — `bailian-deepseek-v4-pro.json`　_(2026-05-07)_
+- `[x]` DeepSeek-V4-Flash — `bailian-deepseek-v4-flash.json`　_(2026-05-07)_
 
 **Kimi 系列 (Moonshot AI)**
-- `[x]` Kimi-K2.6 — `bailian-kimi-k2.6.json`
+- `[x]` Kimi-K2.6 — `bailian-kimi-k2.6.json`　_(2026-05-07)_
 
 **GLM 系列 (智谱清言 / Zhipu AI)**
-- `[x]` GLM-5.1 — `bailian-glm-5.1.json`
+- `[x]` GLM-5.1 — `bailian-glm-5.1.json`　_(2026-05-07)_
 
 **MiniMax 系列**
-- `[x]` MiniMax-M2.5 — `bailian-MiniMax-M2.5.json`
+- `[x]` MiniMax-M2.5 — `bailian-MiniMax-M2.5.json`　_(2026-05-07)_
 - `[ ]` MiniMax/Speech-2.8-HD — 语音合成
 
 #### 官方直连 API（非百炼转发）
 
-- `[ ]` 百度千帆 (Baidu Qianfan / ERNIE)
-- `[ ]` 硅基流动 (SiliconFlow)
-- `[ ]` 字节火山引擎 (ByteDance Volcengine / 豆包)
-- `[x]` DeepSeek 官方 (`api.deepseek.com`) — `deepseek-v4-pro-20260504.json`
-- `[ ]` Anthropic (Claude)
-- `[ ]` Google (Gemini)
-- `[ ]` OpenAI (GPT / o-series)
+- `[x]` 百度千帆 (Baidu Qianfan / ERNIE) — `qianfan-ernie-5.1.json`　_(2026-05-09)_
+- `[x]` 硅基流动 (SiliconFlow) — `siliconflow-deepseek-v3.json`　_(2026-05-09)_
+- `[x]` 字节火山引擎 (ByteDance Volcengine / 豆包) — `volcengine-doubao-seed-2.0-lite.json`　_(2026-05-09)_
+- `[x]` DeepSeek 官方 (`api.deepseek.com`) — `deepseek-v4-pro-20260504.json`　_(2026-05-04)_
+- `[x]` Anthropic (Claude) — `anthropic-claude-sonnet-4.6.json`　_(2026-05-09)_
+- `[x]` Google (Gemini) — `google-gemini-2.5-pro.json`　_(2026-05-09)_
+- `[x]` OpenAI (GPT / o-series) — `openai-gpt-4.1.json` / `openai-o4-mini.json`　_(2026-05-09)_
 
 ### 5.1 插件文件命名规范
 **格式**: `[提供商]-[模型名称(可选)]-[最后修改日期(yyyyMMdd)].json` (示例: `deepseek-v4-pro-20260504.json`)

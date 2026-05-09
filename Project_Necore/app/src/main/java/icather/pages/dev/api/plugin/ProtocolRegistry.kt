@@ -15,9 +15,9 @@ object ProtocolRegistry {
     private var isInitialized = false
 
     init {
-        // Register default protocols.
+        // Register default protocols (legacy hardcoded entries).
         protocols["OpenAI"] = { OpenAiApiService() }
-        protocols["Anthropic"] = { AnthropicApiService() }
+        // Anthropic 的硬编码空壳已移除，改由 JSON 插件 + AnthropicDynamicApiService 驱动
     }
 
     fun init(context: Context) {
@@ -37,7 +37,14 @@ object ProtocolRegistry {
                         reader.close()
                         
                         if (config?.providerInfo?.id?.isNotBlank() == true) {
-                            protocols[config.providerInfo.id] = { DynamicApiService(config) }
+                            // 第零法则路由：根据协议兼容性分发到对应的 ApiService 实现
+                            // 编译期保证 OpenAI 兼容协议和 Anthropic 协议走不同的类型通道
+                            if (config.providerInfo.isOpenAiCompatible) {
+                                protocols[config.providerInfo.id] = { DynamicApiService(config) }
+                            } else {
+                                // 非 OpenAI 兼容协议，目前仅支持 Anthropic
+                                protocols[config.providerInfo.id] = { AnthropicDynamicApiService(config) }
+                            }
                             pluginConfigs[config.providerInfo.id] = config
                         }
                     } catch (e: Exception) {

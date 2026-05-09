@@ -1,0 +1,48 @@
+{
+  "provider_info": {
+    "id": "gpt-4.1",
+    "display_name": "GPT-4.1 (OpenAI)",
+    "base_url": "https://api.openai.com/v1",
+    "is_openai_compatible": true
+  },
+  "feature_reasoning": {
+    "supported": false
+  },
+  "feature_cache": {
+    "supported": true,
+    "strategy": "implicit_prefix",
+    "minimum_tokens_to_trigger": 1024
+  },
+  "feature_vision": {
+    "supported": true,
+    "max_images_per_request": 20,
+    "detail_control_supported": true,
+    "input_format": "base64"
+  },
+  "feature_tools": {
+    "supported": true,
+    "strict_mode_supported": true,
+    "parallel_tool_calls_supported": true
+  },
+  "feature_structured_output": {
+    "json_mode_supported": true,
+    "requires_json_keyword_in_prompt": false
+  },
+  "feature_roles": {
+    "system_role_name": "system",
+    "supports_system_role": true
+  },
+  "feature_streaming": {
+    "supported": true
+  },
+  "billing_metadata": {
+    "input_price_per_1m": 2.0,
+    "output_price_per_1m": 8.0,
+    "cache_hit_price_per_1m": 0.5
+  },
+  "constraints": {
+    "max_input_tokens": 1048576,
+    "max_output_tokens": 32768,
+    "context_window_safe_threshold": 0.95
+  }
+}
