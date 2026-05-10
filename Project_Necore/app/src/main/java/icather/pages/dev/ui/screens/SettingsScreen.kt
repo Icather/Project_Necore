@@ -27,6 +27,8 @@ fun SettingsScreen(
     onNavigateToPlugins: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToIdentity: () -> Unit = {},
+    onNavigateToUsage: () -> Unit = {},
+    onNavigateToTemplates: () -> Unit = {},
     onLanguageClick: () -> Unit,
     onImportApiClick: () -> Unit,
     onExportChatClick: () -> Unit,
@@ -93,6 +95,24 @@ fun SettingsScreen(
                         icon = Icons.Filled.Extension,
                         title = "提供商协议插件",
                         onClick = onNavigateToPlugins
+                    )
+                    HorizontalDivider()
+                }
+                // F4: 用量统计入口
+                item {
+                    SettingsItem(
+                        icon = Icons.Filled.BarChart,
+                        title = "用量统计",
+                        onClick = onNavigateToUsage
+                    )
+                    HorizontalDivider()
+                }
+                // F1: Prompt 模板入口
+                item {
+                    SettingsItem(
+                        icon = Icons.Filled.AutoFixHigh,
+                        title = "Prompt 模板",
+                        onClick = onNavigateToTemplates
                     )
                     HorizontalDivider()
                 }

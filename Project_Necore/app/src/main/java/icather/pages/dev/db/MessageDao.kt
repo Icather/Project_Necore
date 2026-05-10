@@ -35,5 +35,35 @@ interface MessageDao {
     // E3: 按 ID 查询消息
     @Query("SELECT * FROM messages WHERE id = :messageId")
     suspend fun getMessageById(messageId: Long): Message?
-}
 
+    // F4: 用量统计 — 全局 Token 汇总
+    @Query("SELECT COALESCE(SUM(inputTokens), 0) FROM messages WHERE isUser = 0")
+    suspend fun getTotalInputTokens(): Long
+
+    @Query("SELECT COALESCE(SUM(outputTokens), 0) FROM messages WHERE isUser = 0")
+    suspend fun getTotalOutputTokens(): Long
+
+    @Query("SELECT COALESCE(SUM(cacheHitTokens), 0) FROM messages WHERE isUser = 0")
+    suspend fun getTotalCacheHitTokens(): Long
+
+    // F4: 对话总数
+    @Query("SELECT COUNT(DISTINCT conversationId) FROM messages")
+    suspend fun getTotalConversationCount(): Int
+
+    // F4: AI 消息总数
+    @Query("SELECT COUNT(*) FROM messages WHERE isUser = 0")
+    suspend fun getTotalAiMessageCount(): Int
+
+    // F4: 按天统计 Token (最近 7 天)
+    @Query("""
+        SELECT 
+            (timestamp / 86400000) as dayEpoch,
+            COALESCE(SUM(inputTokens), 0) as totalInput,
+            COALESCE(SUM(outputTokens), 0) as totalOutput
+        FROM messages 
+        WHERE isUser = 0 AND timestamp > :since
+        GROUP BY dayEpoch 
+        ORDER BY dayEpoch ASC
+    """)
+    suspend fun getDailyTokenStats(since: Long): List<DailyTokenStat>
+}

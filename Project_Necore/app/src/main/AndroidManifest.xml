@@ -53,6 +53,12 @@
         <activity
             android:name=".IdentityActivity"
             android:exported="false" />
+        <activity
+            android:name=".UsageActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PromptTemplateActivity"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
