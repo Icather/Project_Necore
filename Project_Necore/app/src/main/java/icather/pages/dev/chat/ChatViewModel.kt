@@ -272,10 +272,9 @@ class ChatViewModel(
             }
         }
 
-        // 3. D4: 情绪感知指令注入
-        if (prefs.getBoolean("emotion_enabled", true)) {
-            systemPromptParts.add(EmotionParser.getEmotionPromptInjection())
-        }
+        // D4: 情绪感知指令注入已移除
+        // 用户反馈：每条消息都加情绪标签不自然，不像真人。
+        // EmotionState 基础设施保留给 HeartbeatWorker 使用。
 
         // 将编排好的 System Prompt 插入到消息列表开头
         if (systemPromptParts.isNotEmpty()) {

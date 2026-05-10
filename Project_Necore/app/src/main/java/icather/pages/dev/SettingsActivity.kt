@@ -80,6 +80,7 @@ class SettingsActivity : AppCompatActivity() {
                         android.widget.Toast.makeText(this@SettingsActivity, "Plugin Manager coming soon!", android.widget.Toast.LENGTH_SHORT).show()
                     },
                     onNavigateToAbout = { startActivity(Intent(this@SettingsActivity, AboutActivity::class.java)) },
+                    onNavigateToIdentity = { startActivity(Intent(this@SettingsActivity, IdentityActivity::class.java)) },
                     onLanguageClick = { showLanguageSelectionDialog() },
                     onImportApiClick = { importApiLauncher.launch(arrayOf("application/json")) },
                     onExportChatClick = { showExportChatHistoryDialog() },

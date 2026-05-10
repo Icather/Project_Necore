@@ -13,6 +13,9 @@ interface IdentityDao {
     @Query("SELECT * FROM identities ORDER BY id ASC")
     fun getAll(): Flow<List<Identity>>
 
+    @Query("SELECT * FROM identities ORDER BY id ASC")
+    suspend fun getAllList(): List<Identity>
+
     @Query("SELECT * FROM identities WHERE isActive = 1 LIMIT 1")
     suspend fun getActive(): Identity?
 

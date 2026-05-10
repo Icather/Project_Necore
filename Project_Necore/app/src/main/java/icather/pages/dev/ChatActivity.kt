@@ -53,6 +53,9 @@ class ChatActivity : AppCompatActivity() {
             viewModel.startNewChat()
         }
 
+        // D4: Android 13+ 通知权限运行时请求（HeartbeatWorker 关怀通知需要）
+        requestNotificationPermissionIfNeeded()
+
         setContent {
             Project_NecoreTheme {
                 ChatScreen(
@@ -110,6 +113,25 @@ class ChatActivity : AppCompatActivity() {
                 true
             }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    /**
+     * D4: Android 13+ (API 33) 需要运行时请求通知权限
+     * 首次打开 App 时弹出系统权限对话框
+     */
+    private fun requestNotificationPermissionIfNeeded() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    this, android.Manifest.permission.POST_NOTIFICATIONS
+                ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                androidx.core.app.ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    1001
+                )
+            }
         }
     }
 }

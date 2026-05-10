@@ -50,6 +50,9 @@
         <activity
             android:name=".NewApiActivity"
             android:exported="false" />
+        <activity
+            android:name=".IdentityActivity"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
