@@ -78,4 +78,15 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
     fun getCompletion(apiService: ApiService, messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any> = emptyMap()): Flow<ApiService.ApiResponseChunk> {
         return apiService.getCompletion(messages, apiKey, options).flowOn(Dispatchers.IO)
     }
+
+    // E3: 删除指定时间戳及之后的所有消息
+    suspend fun deleteMessagesFrom(conversationId: Long, fromTimestamp: Long) = withContext(Dispatchers.IO) {
+        db.messageDao().deleteMessagesFrom(conversationId, fromTimestamp)
+    }
+
+    // E1: 删除对话中最后一条消息
+    suspend fun deleteLastMessage(conversationId: Long) = withContext(Dispatchers.IO) {
+        db.messageDao().deleteLastMessage(conversationId)
+    }
 }
+

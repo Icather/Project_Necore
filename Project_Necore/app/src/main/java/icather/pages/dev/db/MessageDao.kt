@@ -23,4 +23,17 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
     suspend fun deleteByConversationId(conversationId: Long)
+
+    // E3: 删除指定消息及其之后的所有消息（通过 timestamp 定位）
+    @Query("DELETE FROM messages WHERE conversationId = :conversationId AND timestamp >= :fromTimestamp")
+    suspend fun deleteMessagesFrom(conversationId: Long, fromTimestamp: Long)
+
+    // E1: 删除对话中最后一条消息
+    @Query("DELETE FROM messages WHERE id = (SELECT id FROM messages WHERE conversationId = :conversationId ORDER BY timestamp DESC LIMIT 1)")
+    suspend fun deleteLastMessage(conversationId: Long)
+
+    // E3: 按 ID 查询消息
+    @Query("SELECT * FROM messages WHERE id = :messageId")
+    suspend fun getMessageById(messageId: Long): Message?
 }
+

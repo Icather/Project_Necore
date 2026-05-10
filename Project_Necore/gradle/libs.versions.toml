@@ -22,7 +22,7 @@ coroutines = "1.8.0"
 material = "1.13.0"
 cardview = "1.0.0"
 lifecycleViewModelCompose = "2.8.7"
-composeMarkdown = "0.5.0"
+composeMarkdown = "0.5.6"
 workRuntimeKtx = "2.10.1"
 
 [libraries]

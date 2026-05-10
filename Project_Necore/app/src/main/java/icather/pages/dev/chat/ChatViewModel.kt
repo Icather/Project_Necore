@@ -153,7 +153,8 @@ class ChatViewModel(
                     isHtml = it.isHtml,
                     inputTokens = it.inputTokens,
                     outputTokens = it.outputTokens,
-                    cacheHitTokens = it.cacheHitTokens
+                    cacheHitTokens = it.cacheHitTokens,
+                    messageId = it.id
                 ) 
             }
             
@@ -483,6 +484,66 @@ class ChatViewModel(
         }
     }
 
+    /**
+     * E3: 编辑消息并重新发送
+     * 1. 截断 UI 列表到 index 位置
+     * 2. DB 中删除该消息及之后的所有消息
+     * 3. 用新文本发送
+     */
+    fun editAndResend(index: Int, newText: String) {
+        val config = _uiState.value.activeApiConfig ?: return
+        val conversationId = _uiState.value.currentConversationId ?: return
+        
+        viewModelScope.launch {
+            // 获取被编辑消息的 DB 信息用于定位删除点
+            val targetMessage = _uiState.value.messages.getOrNull(index) ?: return@launch
+            
+            // 截断 UI 消息列表（保留 index 之前的）
+            val truncated = _uiState.value.messages.take(index).toMutableList()
+            _uiState.value = _uiState.value.copy(messages = truncated)
+            
+            // DB: 删除该消息及之后的所有消息
+            if (targetMessage.messageId > 0) {
+                // 通过 messageId 获取 timestamp 来定位
+                val dbMessages = repository.getMessagesForConversation(conversationId)
+                val targetDb = dbMessages.find { it.id == targetMessage.messageId }
+                if (targetDb != null) {
+                    repository.deleteMessagesFrom(conversationId, targetDb.timestamp)
+                }
+            }
+            
+            // 用新文本重新发送
+            addMessageToView(ChatMessage(newText, true))
+            repository.saveMessage(conversationId, newText, true)
+            
+            getAIResponse(conversationId, config)
+        }
+    }
+
+    /**
+     * E1: 重新生成最后一条 AI 回复
+     * 1. 删除最后一条 AI 消息（UI + DB）
+     * 2. 用相同上下文重新请求
+     */
+    fun regenerateLastResponse() {
+        val config = _uiState.value.activeApiConfig ?: return
+        val conversationId = _uiState.value.currentConversationId ?: return
+        val messages = _uiState.value.messages
+        if (messages.isEmpty() || messages.last().isUser) return
+        
+        viewModelScope.launch {
+            // 移除 UI 中最后一条 AI 消息
+            val truncated = messages.dropLast(1)
+            _uiState.value = _uiState.value.copy(messages = truncated)
+            
+            // DB: 删除最后一条消息
+            repository.deleteLastMessage(conversationId)
+            
+            // 重新请求
+            getAIResponse(conversationId, config)
+        }
+    }
+
     class Factory(private val repository: ChatRepository) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
@@ -493,3 +554,4 @@ class ChatViewModel(
         }
     }
 }
+
