@@ -20,20 +20,37 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
     private val gson = Gson()
     private val prefs = context.getSharedPreferences("api_prefs", Context.MODE_PRIVATE)
 
+    fun getContext(): Context = context
+
     companion object {
         const val DEFAULT_API_ID = 1L
         private const val KEY_IMAGE_COMPRESSION = "image_compression_enabled"
+        private const val KEY_IDENTITY_ENABLED = "identity_enabled"
+        private const val KEY_MEMORY_ENABLED = "memory_enabled"
+        private const val KEY_EMOTION_ENABLED = "emotion_enabled"
     }
 
     fun getAllApiConfigs() = db.apiConfigDao().getAll()
 
     fun isImageCompressionEnabled(): Boolean {
-        return prefs.getBoolean(KEY_IMAGE_COMPRESSION, true) // 默认开启
+        return prefs.getBoolean(KEY_IMAGE_COMPRESSION, true)
     }
 
     fun setImageCompressionEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_IMAGE_COMPRESSION, enabled).apply()
     }
+
+    // D3: AI 人设系统开关（默认开启）
+    fun isIdentityEnabled(): Boolean = prefs.getBoolean(KEY_IDENTITY_ENABLED, true)
+    fun setIdentityEnabled(enabled: Boolean) { prefs.edit().putBoolean(KEY_IDENTITY_ENABLED, enabled).apply() }
+
+    // D3: 长期记忆开关（默认开启）
+    fun isMemoryEnabled(): Boolean = prefs.getBoolean(KEY_MEMORY_ENABLED, true)
+    fun setMemoryEnabled(enabled: Boolean) { prefs.edit().putBoolean(KEY_MEMORY_ENABLED, enabled).apply() }
+
+    // D4: 情绪感知开关（默认开启）
+    fun isEmotionEnabled(): Boolean = prefs.getBoolean(KEY_EMOTION_ENABLED, true)
+    fun setEmotionEnabled(enabled: Boolean) { prefs.edit().putBoolean(KEY_EMOTION_ENABLED, enabled).apply() }
 
     val activeApiConfigId: kotlinx.coroutines.flow.Flow<Long> = kotlinx.coroutines.flow.flow {
         while (true) {

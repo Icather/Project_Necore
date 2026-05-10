@@ -10,6 +10,9 @@ import icather.pages.dev.api.ApiService
 import icather.pages.dev.db.ApiConfig
 import icather.pages.dev.repository.ChatRepository
 import icather.pages.dev.api.plugin.ProtocolRegistry
+import icather.pages.dev.memory.UserMemoryManager
+import icather.pages.dev.soul.EmotionParser
+import icather.pages.dev.soul.EmotionState
 import icather.pages.dev.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +32,8 @@ data class ChatUiState(
     val apiConfigs: List<ApiConfig> = emptyList(),
     val title: String = "",
     val activeProtocol: icather.pages.dev.api.plugin.ProtocolPluginJson? = null,
-    val isThinkingModeEnabled: Boolean = false
+    val isThinkingModeEnabled: Boolean = false,
+    val currentEmotion: EmotionState = EmotionState.Neutral  // D4: AI 当前情绪
 )
 
 class ChatViewModel(
@@ -239,8 +243,45 @@ class ChatViewModel(
         val historyMessages = dbMessages.map { 
             val role = if (it.isUser) "user" else "assistant"
             val content = it.text.replace(Regex("<font color='#999999'>.*?</font><br>", RegexOption.DOT_MATCHES_ALL), "")
-            ApiService.ApiMessage.text(role, content)
+            // D4: 清除历史消息中的情绪标签，避免污染上下文
+            val cleanContent = content.replace(Regex("""\[emotion:\w+]"""), "").trim()
+            ApiService.ApiMessage.text(role, cleanContent)
         }.toMutableList()
+
+        // ===== D3: 灵魂组件库 — 上下文编排引擎 =====
+        // 参考 SillyTavern 的 Prompt 构建顺序：
+        // System Prompt = Identity人设 + User记忆 + 情绪指令 + 聊天历史
+        val systemPromptParts = mutableListOf<String>()
+        val prefs = repository.getContext().getSharedPreferences("api_prefs", android.content.Context.MODE_PRIVATE)
+
+        // 1. Identity 人设注入
+        if (prefs.getBoolean("identity_enabled", true)) {
+            val db = icather.pages.dev.db.AppDatabase.getInstance(repository.getContext())
+            val activeIdentity = db.identityDao().getActive()
+            if (activeIdentity != null && activeIdentity.systemPrompt.isNotBlank()) {
+                systemPromptParts.add(activeIdentity.systemPrompt)
+            }
+        }
+
+        // 2. User.json 长期记忆注入
+        if (prefs.getBoolean("memory_enabled", true)) {
+            val memoryManager = UserMemoryManager(repository.getContext())
+            val memoryText = memoryManager.getFormattedForPrompt()
+            if (memoryText.isNotBlank()) {
+                systemPromptParts.add("[用户档案（长期记忆）]\n$memoryText")
+            }
+        }
+
+        // 3. D4: 情绪感知指令注入
+        if (prefs.getBoolean("emotion_enabled", true)) {
+            systemPromptParts.add(EmotionParser.getEmotionPromptInjection())
+        }
+
+        // 将编排好的 System Prompt 插入到消息列表开头
+        if (systemPromptParts.isNotEmpty()) {
+            val fullSystemPrompt = systemPromptParts.joinToString("\n\n")
+            historyMessages.add(0, ApiService.ApiMessage.text("system", fullSystemPrompt))
+        }
 
         // 多模态图片注入：如果有附件图片且模型支持视觉，替换最后一条用户消息为多模态格式
         val attachedImages = _uiState.value.attachedImages
@@ -281,13 +322,26 @@ class ChatViewModel(
         var finalOutputTokens: Int? = null
         var finalCacheHitTokens: Int? = null
         
-        val options = mapOf("thinking_mode" to _uiState.value.isThinkingModeEnabled)
+        // D3: Tool Calls — 构建 options（含工具定义）
+        val memoryEnabled = prefs.getBoolean("memory_enabled", true)
+        val toolsSupported = _uiState.value.activeProtocol?.featureTools?.supported == true
+        val toolCallHandler = if (memoryEnabled && toolsSupported) {
+            val memoryManager = UserMemoryManager(repository.getContext())
+            icather.pages.dev.api.tools.ToolCallHandler(memoryManager)
+        } else null
+        
+        val options = mutableMapOf<String, Any>("thinking_mode" to _uiState.value.isThinkingModeEnabled)
+        if (toolCallHandler != null) {
+            options["tools_json"] = toolCallHandler.getToolDefinitions()
+        }
 
         // D1: 高频重绘节流阀 — 50ms 时间采样
-        // 大模型每秒吐 50+ 个 chunk，如果逐个刷新 UI 会导致严重 Jank。
-        // 这里只在距上次刷新 ≥50ms 时才推送 UI 更新（≈20fps），人眼无感但 Compose 压力降 80%。
         var lastUiUpdateTime = 0L
         val uiThrottleMs = 50L
+        
+        // D3: Tool Calls 累积器
+        val accumulatedToolCalls = StringBuilder()
+        var detectedToolCallFinish = false
 
         repository.getCompletion(service, apiMessages, apiKey, options)
             .catch { e ->
@@ -295,7 +349,6 @@ class ChatViewModel(
                 if (e is icather.pages.dev.api.ContextLengthExceededException) {
                     val fallbackMsg = "<font color='#ff0000'>[⚠️ Context Limit Exceeded]</font><br>Initiating Memory Compression... (Intercepted HTTP 400. Middle 30% of history will be summarized to rebuild KV Cache Prefix)."
                     updateMessageAt(aiMessageIndex, fallbackMsg)
-                    // The actual summarization call and DB rewrite will be triggered here
                 } else {
                     val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
                     updateMessageAt(aiMessageIndex, errorMsg)
@@ -304,6 +357,8 @@ class ChatViewModel(
             .collect { chunk ->
                 chunk.content?.let { finalContent.append(it) }
                 chunk.reasoning?.let { finalReasoning.append(it) }
+                chunk.toolCalls?.let { accumulatedToolCalls.append(it) }
+                if (chunk.finishReason == "tool_calls") detectedToolCallFinish = true
                 
                 // Track usage if present in the chunk
                 if (chunk.inputTokens != null) finalInputTokens = chunk.inputTokens
@@ -311,24 +366,91 @@ class ChatViewModel(
                 if (chunk.cacheHitTokens != null) finalCacheHitTokens = chunk.cacheHitTokens
 
                 // D1: 节流阀 — 只在超过间隔时才推送 UI
+                // D5 修复: 流式阶段也清理情绪标签，防止闪现
                 val now = System.currentTimeMillis()
                 if (now - lastUiUpdateTime >= uiThrottleMs) {
                     lastUiUpdateTime = now
                     val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
-                    val displayText = reasoningText + finalContent.toString()
+                    val cleanedContent = finalContent.toString().replace(Regex("""\[emotion:\w+]"""), "")
+                    val displayText = reasoningText + cleanedContent
                     updateMessageAt(aiMessageIndex, displayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = true)
                 }
             }
 
+        // ===== D3: Tool Calls 二次调用循环 =====
+        // 如果模型请求了工具调用，执行工具并将结果回传
+        if (detectedToolCallFinish && toolCallHandler != null && accumulatedToolCalls.isNotBlank()) {
+            try {
+                val toolCallsJson = com.google.gson.JsonParser.parseString(accumulatedToolCalls.toString()).asJsonArray
+                
+                // 更新 UI 显示工具调用中
+                updateMessageAt(aiMessageIndex, "🔧 正在执行工具调用...", isStreaming = true)
+                
+                // 执行每个工具调用并收集结果
+                val toolResults = mutableListOf<ApiService.ApiMessage>()
+                // 先把助手的 tool_calls 消息加入（模型要求回传）
+                toolResults.add(ApiService.ApiMessage.text("assistant", finalContent.toString()))
+                
+                for (i in 0 until toolCallsJson.size()) {
+                    val tc = toolCallsJson[i].asJsonObject
+                    val function = tc.getAsJsonObject("function")
+                    val toolCallId = tc.get("id")?.asString ?: "call_$i"
+                    val functionName = function.get("name")?.asString ?: ""
+                    val arguments = function.get("arguments")?.asString ?: "{}"
+                    
+                    val result = toolCallHandler.executeToolCall(functionName, arguments)
+                    toolResults.add(ApiService.ApiMessage.text("tool", result))
+                }
+                
+                // 用原始消息 + 工具结果发起第二次请求（不带 tools，纯流式）
+                val secondRoundMessages = apiMessages.toMutableList()
+                secondRoundMessages.addAll(toolResults)
+                
+                val secondContent = StringBuilder()
+                val secondOptions = mapOf<String, Any>("thinking_mode" to _uiState.value.isThinkingModeEnabled)
+                
+                repository.getCompletion(service, secondRoundMessages, apiKey, secondOptions)
+                    .catch { /* 二次调用失败时静默降级，保留第一次的内容 */ }
+                    .collect { chunk ->
+                        chunk.content?.let { secondContent.append(it) }
+                        if (chunk.inputTokens != null) finalInputTokens = chunk.inputTokens
+                        if (chunk.outputTokens != null) finalOutputTokens = chunk.outputTokens
+                        
+                        val now = System.currentTimeMillis()
+                        if (now - lastUiUpdateTime >= uiThrottleMs) {
+                            lastUiUpdateTime = now
+                            val cleanedContent = secondContent.toString().replace(Regex("""\[emotion:\w+]"""), "")
+                            updateMessageAt(aiMessageIndex, cleanedContent, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = true)
+                        }
+                    }
+                
+                // 用第二轮结果覆盖最终显示
+                if (secondContent.isNotEmpty()) {
+                    finalContent.clear()
+                    finalContent.append(secondContent)
+                }
+            } catch (e: Exception) {
+                println("Tool call loop error: ${e.message}")
+                // 降级：保留第一次的内容
+            }
+        }
+
         // D1: 流结束 — 最终全量刷新 + 关闭 isStreaming 标记
         val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
-        val finalDisplayText = reasoningText + finalContent.toString()
+        var finalDisplayText = reasoningText + finalContent.toString()
+
+        // D4: 情绪解析 — 从回复中提取情绪标签并更新 UI 状态
+        val emotionResult = EmotionParser.parse(finalContent.toString())
+        _uiState.value = _uiState.value.copy(currentEmotion = emotionResult.emotion)
+        // 使用清除了情绪标签的文本显示
+        finalDisplayText = reasoningText + emotionResult.cleanText
+
         updateMessageAt(aiMessageIndex, finalDisplayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = false)
 
         val dbMessageText = if (finalReasoning.isNotEmpty()) {
-            "<font color='#999999'>${finalReasoning}</font><br>${finalContent}"
+            "<font color='#999999'>${finalReasoning}</font><br>${emotionResult.cleanText}"
         } else {
-            finalContent.toString()
+            emotionResult.cleanText
         }
 
         repository.saveMessage(

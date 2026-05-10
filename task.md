@@ -1,4 +1,4 @@
-# Project_Necore 核心攻坚与远景待办列表 (TODOs)
+﻿# Project_Necore 核心攻坚与远景待办列表 (TODOs)
 
 *(全盘整合版：将“高级特化架构”、“端侧防弹机制”与“灵魂引擎”按实施难度和可行性归纳为三大战役)*
 
@@ -27,5 +27,5 @@
 *(目标：打破手机硬件瓶颈，并赋予应用“真正的灵魂”)*
 - `[x]` **D1. Compose 高频重绘节流阀**: 在 ViewModel 的 `.collect{}` 中引入 50ms 时间采样节流（≈20fps），将大模型高速吐字时的 UI 重组频率降低 80%。同时在 ChatScreen 中实现惰性渲染：流式阶段用轻量 `Text()` 替代 `MarkdownText()`，流结束后一次性切换回精准 Markdown 格式化。
 - `[x]` **D2. Base64 多模态 OOM 防爆墙**: 新建 `ImageCompressor.kt` 压缩引擎（长边≤1568px，JPEG 75%）。在设置页面新增"图片自动压缩"用户开关：开启时自动压缩；关闭时强制校验图片总大小不超过 20MB，超限弹出警告拦截。
-- `[ ]` **D3. 灵魂组件库 (Identity & User)**: 剥离固化 System Prompt，支持多重 `Identity` 配置文件加载并联动 UI 颜色主题。接入 Tool Calls 特性，赋予模型读写本地 `User.json` 档案的能力，实现跨越时空的“长期记忆”。
-- `[ ]` **D4. 情绪与静默关怀 (Soul & Heartbeat)**: 设计情感变量引擎动态改变模型的心情指数。基于 Android `WorkManager` 实现 AI 后台静默唤醒，根据天气/时间向用户推送主动关怀消息，完成向“陪伴体”的终极进化。
+- `[x]` **D3. 灵魂组件库 (Identity & User)**: 剥离固化 System Prompt，支持多重 `Identity` 配置文件加载并联动 UI 颜色主题。接入 Tool Calls 特性，赋予模型读写本地 `User.json` 档案的能力，实现跨越时空的“长期记忆”。
+- `[x]` **D4. 情绪与静默关怀 (Soul & Heartbeat)**: 设计情感变量引擎动态改变模型的心情指数。基于 Android `WorkManager` 实现 AI 后台静默唤醒，根据天气/时间向用户推送主动关怀消息，完成向“陪伴体”的终极进化。

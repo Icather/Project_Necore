@@ -15,7 +15,10 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val isLoading: Boolean = false,
-    val isImageCompressionEnabled: Boolean = true
+    val isImageCompressionEnabled: Boolean = true,
+    val isIdentityEnabled: Boolean = true,
+    val isMemoryEnabled: Boolean = true,
+    val isEmotionEnabled: Boolean = true
 )
 
 sealed class SettingsEvent {
@@ -33,13 +36,40 @@ class SettingsViewModel(
 
     init {
         _uiState.value = _uiState.value.copy(
-            isImageCompressionEnabled = repository.isImageCompressionEnabled()
+            isImageCompressionEnabled = repository.isImageCompressionEnabled(),
+            isIdentityEnabled = repository.isIdentityEnabled(),
+            isMemoryEnabled = repository.isMemoryEnabled(),
+            isEmotionEnabled = repository.isEmotionEnabled()
         )
     }
 
     fun setImageCompressionEnabled(enabled: Boolean) {
         repository.setImageCompressionEnabled(enabled)
         _uiState.value = _uiState.value.copy(isImageCompressionEnabled = enabled)
+    }
+
+    // D3: AI 人设系统
+    fun setIdentityEnabled(enabled: Boolean) {
+        repository.setIdentityEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isIdentityEnabled = enabled)
+    }
+
+    // D3: 长期记忆
+    fun setMemoryEnabled(enabled: Boolean) {
+        repository.setMemoryEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isMemoryEnabled = enabled)
+    }
+
+    // D4: 情绪感知 — 联动 HeartbeatWorker 调度
+    fun setEmotionEnabled(enabled: Boolean) {
+        repository.setEmotionEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isEmotionEnabled = enabled)
+        val context = repository.getContext()
+        if (enabled) {
+            icather.pages.dev.soul.HeartbeatWorker.schedule(context)
+        } else {
+            icather.pages.dev.soul.HeartbeatWorker.cancel(context)
+        }
     }
 
     private val _events = MutableSharedFlow<SettingsEvent>()

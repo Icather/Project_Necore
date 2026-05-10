@@ -12,12 +12,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@Database(entities = [Conversation::class, Message::class, ApiConfig::class], version = 6, exportSchema = false)
+@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class], version = 7, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
     abstract fun apiConfigDao(): ApiConfigDao
+    abstract fun identityDao(): IdentityDao
 
     companion object {
         @Volatile
@@ -29,7 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "chat_database"
-                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                  .fallbackToDestructiveMigration(true)
                  .addCallback(AppDatabaseCallback(context))
                  .build()
@@ -60,6 +61,26 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE `messages` ADD COLUMN `cacheHitTokens` INTEGER")
             }
         }
+
+        // D3: 灵魂组件库 — Identity 人设表
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `identities` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `systemPrompt` TEXT NOT NULL,
+                        `greeting` TEXT NOT NULL DEFAULT '',
+                        `isActive` INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+                // 预置一个默认助手人设
+                database.execSQL("""
+                    INSERT INTO `identities` (`name`, `systemPrompt`, `greeting`, `isActive`) 
+                    VALUES ('默认助手', '你是一个有用的AI助手，请用简洁、准确的方式回答用户的问题。', '你好！有什么我可以帮你的吗？', 1)
+                """.trimIndent())
+            }
+        }
     }
 
     private class AppDatabaseCallback(private val context: Context) : RoomDatabase.Callback() {
@@ -67,7 +88,11 @@ abstract class AppDatabase : RoomDatabase() {
 
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            // Pre-population of database has been removed.
+            // 新数据库：预置默认助手人设
+            db.execSQL("""
+                INSERT OR IGNORE INTO `identities` (`name`, `systemPrompt`, `greeting`, `isActive`) 
+                VALUES ('默认助手', '你是一个有用的AI助手，请用简洁、准确的方式回答用户的问题。', '你好！有什么我可以帮你的吗？', 1)
+            """.trimIndent())
         }
     }
 }

@@ -26,6 +26,7 @@ fun SettingsScreen(
     onNavigateToApiConfig: () -> Unit,
     onNavigateToPlugins: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToIdentity: () -> Unit = {},
     onLanguageClick: () -> Unit,
     onImportApiClick: () -> Unit,
     onExportChatClick: () -> Unit,
@@ -129,6 +130,48 @@ fun SettingsScreen(
                     }
                     HorizontalDivider()
                 }
+                // D3: AI 人设系统开关
+                item {
+                    SoulToggleItem(
+                        icon = Icons.Filled.Person,
+                        title = "AI 人设系统",
+                        subtitle = if (uiState.isIdentityEnabled) "已开启 · 可切换不同AI人格" else "已关闭 · 使用默认行为",
+                        checked = uiState.isIdentityEnabled,
+                        onCheckedChange = { viewModel.setIdentityEnabled(it) }
+                    )
+                    HorizontalDivider()
+                }
+                // D3: 人设管理入口
+                item {
+                    SettingsItem(
+                        icon = Icons.Filled.ManageAccounts,
+                        title = "管理 AI 人设",
+                        onClick = onNavigateToIdentity
+                    )
+                    HorizontalDivider()
+                }
+                // D3: 长期记忆开关
+                item {
+                    SoulToggleItem(
+                        icon = Icons.Filled.Psychology,
+                        title = "长期记忆",
+                        subtitle = if (uiState.isMemoryEnabled) "已开启 · AI会记住你的偏好" else "已关闭 · 每次对话独立",
+                        checked = uiState.isMemoryEnabled,
+                        onCheckedChange = { viewModel.setMemoryEnabled(it) }
+                    )
+                    HorizontalDivider()
+                }
+                // D4: 情绪感知开关
+                item {
+                    SoulToggleItem(
+                        icon = Icons.Filled.Favorite,
+                        title = "情绪感知",
+                        subtitle = if (uiState.isEmotionEnabled) "已开启 · AI会表达情绪变化" else "已关闭 · 纯理性模式",
+                        checked = uiState.isEmotionEnabled,
+                        onCheckedChange = { viewModel.setEmotionEnabled(it) }
+                    )
+                    HorizontalDivider()
+                }
                 item {
                     SettingsItem(
                         icon = Icons.Filled.Upload,
@@ -199,6 +242,50 @@ fun SettingsItem(icon: ImageVector, title: String, onClick: () -> Unit) {
             text = title,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+/**
+ * D3/D4 灵魂引擎专用开关组件
+ * 复用图片压缩开关的布局风格，保持设置页 UI 一致性
+ */
+@Composable
+fun SoulToggleItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
         )
     }
 }

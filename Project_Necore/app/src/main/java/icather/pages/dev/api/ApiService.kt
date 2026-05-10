@@ -45,7 +45,9 @@ interface ApiService {
         val reasoning: String?,
         val inputTokens: Int? = null,
         val outputTokens: Int? = null,
-        val cacheHitTokens: Int? = null
+        val cacheHitTokens: Int? = null,
+        val toolCalls: String? = null,      // D3: JSON string of tool_calls array
+        val finishReason: String? = null     // D3: "tool_calls" / "stop" / null
     )
 
     /**

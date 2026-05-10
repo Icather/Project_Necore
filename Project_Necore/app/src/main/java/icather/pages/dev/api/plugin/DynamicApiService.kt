@@ -26,7 +26,8 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
         val messages: List<ApiService.ApiMessage>,
         val stream: Boolean = true,
         val temperature: Double? = null,
-        val extraPayload: JsonObject? = null
+        val extraPayload: JsonObject? = null,
+        val toolsJson: JsonArray? = null  // D3: Tool Calls 工具定义注入
     )
 
     // ===== MessageContent 多态序列化器 =====
@@ -71,6 +72,9 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
 
             jsonObj.addProperty("stream", src.stream)
             src.temperature?.let { jsonObj.addProperty("temperature", it) }
+
+            // D3: Tool Calls 工具定义注入
+            src.toolsJson?.let { jsonObj.add("tools", it) }
             
             // Inject extra payload directly into root without heavy tree merges
             src.extraPayload?.entrySet()?.forEach { entry ->
@@ -81,8 +85,8 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
         .create()
 
     private data class StreamResponse(val choices: List<StreamChoice>?, val usage: StreamUsage?)
-    private data class StreamChoice(val delta: StreamDelta?)
-    private data class StreamDelta(val content: String?, val reasoning_content: String?)
+    private data class StreamChoice(val delta: StreamDelta?, val finish_reason: String?)
+    private data class StreamDelta(val content: String?, val reasoning_content: String?, val tool_calls: JsonArray?)
     private data class StreamUsage(val prompt_tokens: Int?, val completion_tokens: Int?, val prompt_cache_hit_tokens: Int?)
 
     override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any>): Flow<ApiService.ApiResponseChunk> = flow {
@@ -107,12 +111,16 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
             }
         }
 
+        // D3: Tool Calls — 从 options 中提取工具定义
+        val toolsJson = options["tools_json"] as? JsonArray
+
         val requestBody = DynamicApiRequest(
             model = providerInfo.id,
             messages = mappedMessages,
             stream = true,
             temperature = temperature,
-            extraPayload = extraPayload
+            extraPayload = extraPayload,
+            toolsJson = toolsJson
         )
 
         val requestJson = gson.toJson(requestBody)
@@ -143,23 +151,28 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
                         if (json != "[DONE]") {
                             try {
                                 val chunk = gson.fromJson(json, StreamResponse::class.java)
-                                val delta = chunk.choices?.firstOrNull()?.delta
+                                val firstChoice = chunk.choices?.firstOrNull()
+                                val delta = firstChoice?.delta
                                 val usage = chunk.usage
                                 
                                 // Map custom response field for reasoning if needed
                                 val reasoningContent = if (config.featureReasoning?.responseField != null && config.featureReasoning.responseField != "reasoning_content") {
-                                    // This requires parsing as JsonObject to get dynamic field, skipping for performance unless needed
                                     delta?.reasoning_content 
                                 } else {
                                     delta?.reasoning_content
                                 }
+
+                                // D3: Tool Calls 透传
+                                val toolCallsStr = delta?.tool_calls?.toString()
 
                                 emit(ApiService.ApiResponseChunk(
                                     content = delta?.content,
                                     reasoning = reasoningContent,
                                     inputTokens = usage?.prompt_tokens,
                                     outputTokens = usage?.completion_tokens,
-                                    cacheHitTokens = usage?.prompt_cache_hit_tokens
+                                    cacheHitTokens = usage?.prompt_cache_hit_tokens,
+                                    toolCalls = toolCallsStr,
+                                    finishReason = firstChoice?.finish_reason
                                 ))
                             } catch (e: Exception) {
                                 // Fault tolerance for bad chunks
