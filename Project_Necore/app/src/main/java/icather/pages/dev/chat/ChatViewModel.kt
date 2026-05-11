@@ -343,6 +343,9 @@ class ChatViewModel(
         val accumulatedToolCalls = StringBuilder()
         var detectedToolCallFinish = false
 
+        // G2: Fallback 状态追踪
+        var fallbackTriggered = false
+
         repository.getCompletion(service, apiMessages, apiKey, options)
             .catch { e ->
                 // B2: 记忆压缩与 Token 退避 (Memory Compression & Token Backoff)
@@ -350,8 +353,16 @@ class ChatViewModel(
                     val fallbackMsg = "<font color='#ff0000'>[⚠️ Context Limit Exceeded]</font><br>Initiating Memory Compression... (Intercepted HTTP 400. Middle 30% of history will be summarized to rebuild KV Cache Prefix)."
                     updateMessageAt(aiMessageIndex, fallbackMsg)
                 } else {
-                    val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
-                    updateMessageAt(aiMessageIndex, errorMsg)
+                    // G2: 模型自动降级 — 主模型失败时尝试备选
+                    val prefs2 = repository.getContext().getSharedPreferences("api_prefs", android.content.Context.MODE_PRIVATE)
+                    val fallbackEnabled = prefs2.getBoolean("fallback_enabled", false)
+                    if (fallbackEnabled) {
+                        fallbackTriggered = true
+                        updateMessageAt(aiMessageIndex, "⚡ 主模型失败，正在尝试自动降级...", isStreaming = true)
+                    } else {
+                        val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
+                        updateMessageAt(aiMessageIndex, errorMsg)
+                    }
                 }
             }
             .collect { chunk ->
@@ -462,6 +473,84 @@ class ChatViewModel(
             outputTokens = finalOutputTokens,
             cacheHitTokens = finalCacheHitTokens
         )
+
+        // ===== G2: 模型 Fallback 链执行 =====
+        if (fallbackTriggered) {
+            val db = icather.pages.dev.db.AppDatabase.getInstance(repository.getContext())
+            val allConfigs = withContext(Dispatchers.IO) { db.apiConfigDao().getAllOnce() }
+            val otherConfigs = allConfigs.filter { it.id != config.id && it.apiKey.isNotBlank() }
+
+            if (otherConfigs.isEmpty()) {
+                updateMessageAt(aiMessageIndex, "⚠️ 主模型失败，且无可用的备选模型配置。", isStreaming = false)
+                return
+            }
+
+            // 逐个尝试备选模型
+            for (fallbackConfig in otherConfigs) {
+                try {
+                    updateMessageAt(aiMessageIndex, "⚡ 正在尝试备选模型: ${fallbackConfig.name}...", isStreaming = true)
+                    val fallbackService = repository.createApiService(fallbackConfig.provider)
+                    val fbContent = StringBuilder()
+                    val fbReasoning = StringBuilder()
+                    var fbInputTokens: Int? = null
+                    var fbOutputTokens: Int? = null
+                    var fbCacheHitTokens: Int? = null
+                    val fbOptions = mapOf<String, Any>("thinking_mode" to _uiState.value.isThinkingModeEnabled)
+                    var fbSuccess = false
+
+                    repository.getCompletion(fallbackService, apiMessages, fallbackConfig.apiKey, fbOptions)
+                        .catch { /* 此备选也失败，跳过 */ }
+                        .collect { chunk ->
+                            fbSuccess = true
+                            chunk.content?.let { fbContent.append(it) }
+                            chunk.reasoning?.let { fbReasoning.append(it) }
+                            if (chunk.inputTokens != null) fbInputTokens = chunk.inputTokens
+                            if (chunk.outputTokens != null) fbOutputTokens = chunk.outputTokens
+                            if (chunk.cacheHitTokens != null) fbCacheHitTokens = chunk.cacheHitTokens
+
+                            val now = System.currentTimeMillis()
+                            if (now - lastUiUpdateTime >= uiThrottleMs) {
+                                lastUiUpdateTime = now
+                                val fbReasoningText = if (fbReasoning.isNotEmpty()) "<font color='#999999'>${fbReasoning}</font><br>" else ""
+                                val fbClean = fbContent.toString().replace(Regex("""\[emotion:\w+]"""), "")
+                                updateMessageAt(aiMessageIndex, fbReasoningText + fbClean, fbInputTokens, fbOutputTokens, fbCacheHitTokens, isStreaming = true)
+                            }
+                        }
+
+                    if (fbSuccess && fbContent.isNotEmpty()) {
+                        // Fallback 成功 — 最终显示
+                        val fbReasoningText = if (fbReasoning.isNotEmpty()) "<font color='#999999'>${fbReasoning}</font><br>" else ""
+                        val fbEmotionResult = EmotionParser.parse(fbContent.toString())
+                        val fbFinalText = fbReasoningText + fbEmotionResult.cleanText
+                        val fbNote = "<font color='#FF9800'>[⚡ 已自动降级至 ${fallbackConfig.name}]</font><br>"
+                        updateMessageAt(aiMessageIndex, fbNote + fbFinalText, fbInputTokens, fbOutputTokens, fbCacheHitTokens, isStreaming = false)
+
+                        // 更新 DB 中的消息（覆盖之前可能保存的空内容）
+                        val fbDbText = if (fbReasoning.isNotEmpty()) {
+                            "<font color='#999999'>${fbReasoning}</font><br>${fbEmotionResult.cleanText}"
+                        } else {
+                            fbEmotionResult.cleanText
+                        }
+                        // 删除旧的空 AI 消息，重新保存
+                        repository.deleteLastMessage(conversationId)
+                        repository.saveMessage(
+                            conversationId = conversationId,
+                            text = fbDbText,
+                            isUser = false,
+                            isHtml = true,
+                            inputTokens = fbInputTokens,
+                            outputTokens = fbOutputTokens,
+                            cacheHitTokens = fbCacheHitTokens
+                        )
+                        return // 成功降级，退出
+                    }
+                } catch (_: Exception) {
+                    // 此备选也失败，继续尝试下一个
+                }
+            }
+            // 所有备选都失败
+            updateMessageAt(aiMessageIndex, "⚠️ 所有模型均不可用。请检查 API 配置。", isStreaming = false)
+        }
     }
 
     private fun addMessageToView(message: ChatMessage) {

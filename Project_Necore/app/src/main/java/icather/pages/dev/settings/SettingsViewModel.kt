@@ -18,7 +18,8 @@ data class SettingsUiState(
     val isImageCompressionEnabled: Boolean = true,
     val isIdentityEnabled: Boolean = true,
     val isMemoryEnabled: Boolean = true,
-    val isEmotionEnabled: Boolean = true
+    val isEmotionEnabled: Boolean = true,
+    val isFallbackEnabled: Boolean = false
 )
 
 sealed class SettingsEvent {
@@ -39,7 +40,8 @@ class SettingsViewModel(
             isImageCompressionEnabled = repository.isImageCompressionEnabled(),
             isIdentityEnabled = repository.isIdentityEnabled(),
             isMemoryEnabled = repository.isMemoryEnabled(),
-            isEmotionEnabled = repository.isEmotionEnabled()
+            isEmotionEnabled = repository.isEmotionEnabled(),
+            isFallbackEnabled = repository.isFallbackEnabled()
         )
     }
 
@@ -70,6 +72,12 @@ class SettingsViewModel(
         } else {
             icather.pages.dev.soul.HeartbeatWorker.cancel(context)
         }
+    }
+
+    // G2: 模型 Fallback 链
+    fun setFallbackEnabled(enabled: Boolean) {
+        repository.setFallbackEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isFallbackEnabled = enabled)
     }
 
     private val _events = MutableSharedFlow<SettingsEvent>()

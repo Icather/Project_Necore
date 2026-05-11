@@ -192,6 +192,17 @@ fun SettingsScreen(
                     )
                     HorizontalDivider()
                 }
+                // G2: 模型 Fallback 链开关
+                item {
+                    SoulToggleItem(
+                        icon = Icons.Filled.SwapHoriz,
+                        title = "模型自动降级",
+                        subtitle = if (uiState.isFallbackEnabled) "已开启 · 主模型失败自动切换备选" else "已关闭 · 仅使用当前模型",
+                        checked = uiState.isFallbackEnabled,
+                        onCheckedChange = { viewModel.setFallbackEnabled(it) }
+                    )
+                    HorizontalDivider()
+                }
                 item {
                     SettingsItem(
                         icon = Icons.Filled.Upload,

@@ -3,6 +3,8 @@ package icather.pages.dev
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -13,8 +15,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.textfield.TextInputEditText
 import icather.pages.dev.db.AppDatabase
 import icather.pages.dev.db.Conversation
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class HistoryActivity : AppCompatActivity() {
@@ -24,6 +29,7 @@ class HistoryActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private lateinit var historyAdapter: HistoryAdapter
     private var isSelectionMode = false
+    private var searchJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +49,26 @@ class HistoryActivity : AppCompatActivity() {
         db = AppDatabase.getInstance(this)
 
         recyclerView.layoutManager = LinearLayoutManager(this)
+
+        // E5: 搜索功能
+        val searchEditText = findViewById<TextInputEditText>(R.id.searchEditText)
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString()?.trim() ?: ""
+                // 300ms 防抖
+                searchJob?.cancel()
+                searchJob = lifecycleScope.launch {
+                    delay(300)
+                    if (query.isEmpty()) {
+                        loadHistory()
+                    } else {
+                        searchHistory(query)
+                    }
+                }
+            }
+        })
 
         loadHistory()
     }
@@ -178,6 +204,16 @@ class HistoryActivity : AppCompatActivity() {
                 selectAllItem.title = getString(R.string.deselect_all)
             } else {
                 selectAllItem.title = getString(R.string.select_all)
+            }
+        }
+    }
+
+    // E5: 搜索历史对话（标题 + 消息内容全文检索）
+    private fun searchHistory(query: String) {
+        lifecycleScope.launch {
+            val results = db.conversationDao().searchConversations(query)
+            if (::historyAdapter.isInitialized) {
+                historyAdapter.updateData(results)
             }
         }
     }

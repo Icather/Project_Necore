@@ -27,4 +27,14 @@ interface ConversationDao {
 
     @Query("DELETE FROM conversations WHERE id = :conversationId")
     suspend fun deleteById(conversationId: Long)
+
+    // E5: 搜索 — 标题匹配 + 消息内容全文搜索
+    @Query("""
+        SELECT DISTINCT c.* FROM conversations c 
+        LEFT JOIN messages m ON c.id = m.conversationId 
+        WHERE c.title LIKE '%' || :query || '%' 
+           OR m.text LIKE '%' || :query || '%'
+        ORDER BY c.startTime DESC
+    """)
+    suspend fun searchConversations(query: String): List<Conversation>
 }
