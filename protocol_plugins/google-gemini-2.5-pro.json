@@ -3,7 +3,8 @@
     "id": "gemini-2.5-pro",
     "display_name": "Gemini 2.5 Pro (Google)",
     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-    "is_openai_compatible": true
+    "is_openai_compatible": true,
+    "available_models": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
   },
   "feature_reasoning": {
     "supported": true,

@@ -114,8 +114,13 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
         // D3: Tool Calls — 从 options 中提取工具定义
         val toolsJson = options["tools_json"] as? JsonArray
 
+        // 模型名称：优先使用用户在 ApiConfig 中配置的 modelName，
+        // 否则回退到协议插件的 provider_info.id（兼容旧配置）
+        val modelName = (options["model_name"] as? String)?.takeIf { it.isNotBlank() }
+            ?: providerInfo.id
+
         val requestBody = DynamicApiRequest(
-            model = providerInfo.id,
+            model = modelName,
             messages = mappedMessages,
             stream = true,
             temperature = temperature,

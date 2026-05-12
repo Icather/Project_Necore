@@ -330,7 +330,10 @@ class ChatViewModel(
             icather.pages.dev.api.tools.ToolCallHandler(memoryManager)
         } else null
         
-        val options = mutableMapOf<String, Any>("thinking_mode" to _uiState.value.isThinkingModeEnabled)
+        val options = mutableMapOf<String, Any>(
+            "thinking_mode" to _uiState.value.isThinkingModeEnabled,
+            "model_name" to config.modelName  // 用户配置的模型名称，透传给 DynamicApiService
+        )
         if (toolCallHandler != null) {
             options["tools_json"] = toolCallHandler.getToolDefinitions()
         }
@@ -345,6 +348,7 @@ class ChatViewModel(
 
         // G2: Fallback 状态追踪
         var fallbackTriggered = false
+        var errorOccurred = false  // 错误标志：防止 catch 里的错误消息被后续空内容覆盖
 
         repository.getCompletion(service, apiMessages, apiKey, options)
             .catch { e ->
@@ -352,6 +356,7 @@ class ChatViewModel(
                 if (e is icather.pages.dev.api.ContextLengthExceededException) {
                     val fallbackMsg = "<font color='#ff0000'>[⚠️ Context Limit Exceeded]</font><br>Initiating Memory Compression... (Intercepted HTTP 400. Middle 30% of history will be summarized to rebuild KV Cache Prefix)."
                     updateMessageAt(aiMessageIndex, fallbackMsg)
+                    errorOccurred = true
                 } else {
                     // G2: 模型自动降级 — 主模型失败时尝试备选
                     val prefs2 = repository.getContext().getSharedPreferences("api_prefs", android.content.Context.MODE_PRIVATE)
@@ -362,6 +367,7 @@ class ChatViewModel(
                     } else {
                         val errorMsg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
                         updateMessageAt(aiMessageIndex, errorMsg)
+                        errorOccurred = true
                     }
                 }
             }
@@ -447,32 +453,35 @@ class ChatViewModel(
         }
 
         // D1: 流结束 — 最终全量刷新 + 关闭 isStreaming 标记
-        val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
-        var finalDisplayText = reasoningText + finalContent.toString()
+        // 关键守卫：如果 catch 中已经设置了错误消息，不要用空内容覆盖它
+        if (!errorOccurred && !fallbackTriggered) {
+            val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
+            var finalDisplayText = reasoningText + finalContent.toString()
 
-        // D4: 情绪解析 — 从回复中提取情绪标签并更新 UI 状态
-        val emotionResult = EmotionParser.parse(finalContent.toString())
-        _uiState.value = _uiState.value.copy(currentEmotion = emotionResult.emotion)
-        // 使用清除了情绪标签的文本显示
-        finalDisplayText = reasoningText + emotionResult.cleanText
+            // D4: 情绪解析 — 从回复中提取情绪标签并更新 UI 状态
+            val emotionResult = EmotionParser.parse(finalContent.toString())
+            _uiState.value = _uiState.value.copy(currentEmotion = emotionResult.emotion)
+            // 使用清除了情绪标签的文本显示
+            finalDisplayText = reasoningText + emotionResult.cleanText
 
-        updateMessageAt(aiMessageIndex, finalDisplayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = false)
+            updateMessageAt(aiMessageIndex, finalDisplayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = false)
 
-        val dbMessageText = if (finalReasoning.isNotEmpty()) {
-            "<font color='#999999'>${finalReasoning}</font><br>${emotionResult.cleanText}"
-        } else {
-            emotionResult.cleanText
+            val dbMessageText = if (finalReasoning.isNotEmpty()) {
+                "<font color='#999999'>${finalReasoning}</font><br>${emotionResult.cleanText}"
+            } else {
+                emotionResult.cleanText
+            }
+
+            repository.saveMessage(
+                conversationId = conversationId, 
+                text = dbMessageText, 
+                isUser = false, 
+                isHtml = true,
+                inputTokens = finalInputTokens,
+                outputTokens = finalOutputTokens,
+                cacheHitTokens = finalCacheHitTokens
+            )
         }
-
-        repository.saveMessage(
-            conversationId = conversationId, 
-            text = dbMessageText, 
-            isUser = false, 
-            isHtml = true,
-            inputTokens = finalInputTokens,
-            outputTokens = finalOutputTokens,
-            cacheHitTokens = finalCacheHitTokens
-        )
 
         // ===== G2: 模型 Fallback 链执行 =====
         if (fallbackTriggered) {

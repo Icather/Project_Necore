@@ -45,13 +45,14 @@ class AnthropicDynamicApiService(private val config: ProtocolPluginJson) : ApiSe
      */
     private fun buildRequestJson(
         messages: List<ApiService.ApiMessage>,
-        isThinking: Boolean
+        isThinking: Boolean,
+        modelName: String
     ): String {
         val jsonObj = JsonObject()
         val providerInfo = config.providerInfo ?: throw IllegalStateException("Provider info is missing")
 
-        // 设置模型
-        jsonObj.addProperty("model", providerInfo.id)
+        // 设置模型：优先使用用户配置的 modelName
+        jsonObj.addProperty("model", modelName)
 
         // 提取 system 消息（Anthropic 要求 system 在 top-level，不在 messages 数组内）
         val systemMessages = messages.filter { it.role == "system" }
@@ -143,8 +144,10 @@ class AnthropicDynamicApiService(private val config: ProtocolPluginJson) : ApiSe
     ): Flow<ApiService.ApiResponseChunk> = flow {
         val providerInfo = config.providerInfo ?: throw IllegalStateException("Provider info is missing")
         val isThinking = options["thinking_mode"] == true
+        val modelName = (options["model_name"] as? String)?.takeIf { it.isNotBlank() }
+            ?: providerInfo.id
 
-        val requestJson = buildRequestJson(messages, isThinking)
+        val requestJson = buildRequestJson(messages, isThinking, modelName)
 
         // Anthropic 使用 x-api-key 鉴权（不是 Bearer token）
         // API 版本通过 anthropic-version 头指定

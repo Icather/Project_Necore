@@ -201,6 +201,11 @@ fun AddApiDialog(
                                 onClick = {
                                     selectedProvider = provider
                                     expanded = false
+                                    // 切换提供商时自动填入默认模型
+                                    val models = ProtocolRegistry.getAvailableModels(provider)
+                                    if (models.isNotEmpty()) {
+                                        modelName = models.first()
+                                    }
                                 }
                             )
                         }
@@ -227,12 +232,67 @@ fun AddApiDialog(
                     )
                 }
 
-                OutlinedTextField(
-                    value = modelName,
-                    onValueChange = { modelName = it },
-                    label = { Text("Model Name (模型名称 e.g. gpt-4o)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Model Name — 预设下拉 + 手动输入
+                val availableModels = remember(selectedProvider) {
+                    if (selectedProvider.isNotBlank()) ProtocolRegistry.getAvailableModels(selectedProvider) else emptyList()
+                }
+                var modelExpanded by remember { mutableStateOf(false) }
+                var isCustomModel by remember { mutableStateOf(
+                    configToEdit != null && configToEdit.modelName !in availableModels
+                ) }
+
+                if (!isCustomModel && availableModels.isNotEmpty()) {
+                    // 预设模型下拉
+                    ExposedDropdownMenuBox(
+                        expanded = modelExpanded,
+                        onExpandedChange = { modelExpanded = !modelExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = modelName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Model Name (模型名称)") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = modelExpanded,
+                            onDismissRequest = { modelExpanded = false }
+                        ) {
+                            availableModels.forEach { model ->
+                                DropdownMenuItem(
+                                    text = { Text(model) },
+                                    onClick = {
+                                        modelName = model
+                                        modelExpanded = false
+                                    }
+                                )
+                            }
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("✏️ 手动输入模型名称") },
+                                onClick = {
+                                    isCustomModel = true
+                                    modelName = ""
+                                    modelExpanded = false
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    // 手动输入模式
+                    OutlinedTextField(
+                        value = modelName,
+                        onValueChange = { modelName = it },
+                        label = { Text("Model Name (手动输入模型名称)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (availableModels.isNotEmpty()) {
+                        TextButton(onClick = { isCustomModel = false; modelName = availableModels.firstOrNull() ?: "" }) {
+                            Text("← 返回预设列表")
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = displayName,

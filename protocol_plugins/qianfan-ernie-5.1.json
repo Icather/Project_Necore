@@ -3,7 +3,8 @@
     "id": "ernie-5.1",
     "display_name": "文心一言 ERNIE 5.1 (千帆)",
     "base_url": "https://qianfan.baidubce.com/v2",
-    "is_openai_compatible": true
+    "is_openai_compatible": true,
+    "available_models": ["ernie-5.1", "ernie-4.0-turbo-128k", "ernie-speed-pro-128k", "ernie-lite-pro-128k"]
   },
   "feature_reasoning": {
     "supported": false

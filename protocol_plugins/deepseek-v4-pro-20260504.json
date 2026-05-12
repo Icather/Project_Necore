@@ -3,7 +3,8 @@
     "id": "deepseek-v4-pro-2026",
     "display_name": "DeepSeek V4 Pro (Reasoning)",
     "base_url": "https://api.deepseek.com/v1",
-    "is_openai_compatible": true
+    "is_openai_compatible": true,
+    "available_models": ["deepseek-v4-pro-2026", "deepseek-chat", "deepseek-reasoner"]
   },
   "feature_reasoning": {
     "supported": true,

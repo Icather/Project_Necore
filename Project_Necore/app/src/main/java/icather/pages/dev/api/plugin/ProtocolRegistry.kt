@@ -89,4 +89,25 @@ object ProtocolRegistry {
     fun getCapabilities(providerName: String): List<String> {
         return emptyList()
     }
+
+    /**
+     * 获取指定提供商的预设模型列表。
+     * 合并所有使用同一 base_url 的插件中的 available_models + 各插件自身的 id。
+     */
+    fun getAvailableModels(providerName: String): List<String> {
+        val config = pluginConfigs[providerName] ?: return emptyList()
+        val baseUrl = config.providerInfo?.baseUrl ?: return emptyList()
+
+        // 收集所有同 base_url 提供商的模型
+        val models = mutableListOf<String>()
+        pluginConfigs.values.forEach { plugin ->
+            if (plugin.providerInfo?.baseUrl == baseUrl) {
+                // 加入插件自身的 id（即默认模型名）
+                plugin.providerInfo.id.let { models.add(it) }
+                // 加入 available_models 列表
+                plugin.providerInfo.availableModels?.let { models.addAll(it) }
+            }
+        }
+        return models.distinct().sorted()
+    }
 }
