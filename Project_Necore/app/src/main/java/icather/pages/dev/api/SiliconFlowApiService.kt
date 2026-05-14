@@ -18,6 +18,15 @@ class SiliconFlowApiService : ApiService {
 
     private val client = OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build()
 
+    // H3: 当前活跃的 HTTP 请求引用
+    @Volatile
+    private var currentCall: okhttp3.Call? = null
+
+    override fun cancelCurrentRequest() {
+        currentCall?.cancel()
+        currentCall = null
+    }
+
     // Data classes specific to SiliconFlow's API
     private data class SiliconFlowApiRequest(val model: String, val messages: List<ApiService.ApiMessage>, val stream: Boolean)
     private data class SiliconFlowApiStreamResponse(val choices: List<SiliconFlowApiStreamChoice>, val usage: SiliconFlowUsage? = null)
@@ -67,12 +76,18 @@ class SiliconFlowApiService : ApiService {
             .post(requestJson.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = client.newCall(request).execute()
+        val call = client.newCall(request)
+        currentCall = call
+        val response = call.execute()
 
         if (response.isSuccessful) {
-            val reader = response.body?.source()?.inputStream()?.bufferedReader() ?: return@flow
-            reader.useLines { lines ->
-                lines.forEach { line ->
+            // 流式修复：使用 Okio 原生 BufferedSource 逐行读取 SSE。
+            // 避免 Java BufferedReader 的 8KB 预读缓冲导致 SSE 小数据块被积压。
+            val source = response.body?.source() ?: return@flow
+            try {
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: break
+
                     if (line.startsWith("data:")) {
                         val json = line.substring(5).trim()
                         if (json != "[DONE]") {
@@ -93,6 +108,8 @@ class SiliconFlowApiService : ApiService {
                         }
                     }
                 }
+            } finally {
+                source.close()
             }
         } else {
             val errorBody = response.body?.string()

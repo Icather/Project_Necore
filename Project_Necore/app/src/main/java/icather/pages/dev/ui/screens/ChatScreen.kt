@@ -261,7 +261,18 @@ fun ChatScreen(
                                 }
                             }
 
-                            if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
+                            // H3: 生成中 → 终止按钮；有文字 → 发送按钮；无文字 → 麦克风
+                            if (uiState.isGenerating) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(28.dp).clickable { viewModel.stopGenerating() }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Filled.Stop, contentDescription = "Stop", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onError)
+                                    }
+                                }
+                            } else if (inputText.isNotBlank() || uiState.attachedImages.isNotEmpty()) {
                                 Surface(
                                     shape = CircleShape,
                                     color = MaterialTheme.colorScheme.primary,
@@ -392,6 +403,47 @@ fun ChatMessageItem(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
+                // H2: 思考过程独立渲染 — 可折叠灰色区块
+                if (message.reasoningText.isNotBlank()) {
+                    var thinkingExpanded by remember { mutableStateOf(true) }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { thinkingExpanded = !thinkingExpanded },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    if (message.isStreaming) "思考中..." else "思考过程",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    if (thinkingExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                            if (thinkingExpanded) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = message.reasoningText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // D1: 惰性渲染 — 流式用 Text()，完成后切换 MarkdownText()
                 if (message.isStreaming) {
                     Text(

@@ -11,7 +11,8 @@ data class ChatMessage(
     val inputTokens: Int? = null,
     val outputTokens: Int? = null,
     val cacheHitTokens: Int? = null,
-    val messageId: Long = 0  // E3: 关联 DB Message.id，用于编辑/删除定位
+    val messageId: Long = 0,  // E3: 关联 DB Message.id，用于编辑/删除定位
+    val reasoningText: String = ""  // H2: 独立思考链文本，与正文分开渲染
 )
 
 data class ChatHistoryBundle(val conversations: List<Conversation>, val messages: List<Message>)

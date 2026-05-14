@@ -89,6 +89,15 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
     private data class StreamDelta(val content: String?, val reasoning_content: String?, val tool_calls: JsonArray?)
     private data class StreamUsage(val prompt_tokens: Int?, val completion_tokens: Int?, val prompt_cache_hit_tokens: Int?)
 
+    // H3: 当前活跃的 HTTP 请求引用，用于取消
+    @Volatile
+    private var currentCall: okhttp3.Call? = null
+
+    override fun cancelCurrentRequest() {
+        currentCall?.cancel()
+        currentCall = null
+    }
+
     override fun getCompletion(messages: List<ApiService.ApiMessage>, apiKey: String, options: Map<String, Any>): Flow<ApiService.ApiResponseChunk> = flow {
         val providerInfo = config.providerInfo ?: throw IllegalStateException("Provider info is missing")
         
@@ -139,36 +148,50 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
             .post(requestJson.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = client.newCall(request).execute()
+        val call = client.newCall(request)
+        currentCall = call
+        val response = call.execute()
 
         if (response.isSuccessful) {
-            val reader = response.body?.source()?.inputStream()?.bufferedReader() ?: return@flow
-            reader.useLines { lines ->
-                lines.forEach { line ->
+            // 流式修复：使用 Okio 原生 BufferedSource 逐行读取 SSE。
+            // 避免 Java BufferedReader 的 8KB 预读缓冲导致 SSE 小数据块被积压。
+            // Okio 的 readUtf8Line() 在遇到换行符时立即返回，确保逐 chunk 实时推送。
+            val source = response.body?.source() ?: return@flow
+            try {
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: break
+
                     // B4: SSE 保活碎片免疫解析器 (SSE Keep-Alive Immunity)
                     if (line.isBlank() || line.startsWith(":")) {
                         // Ignore empty lines and keep-alive comments like ": keep-alive"
-                        return@forEach
+                        continue
                     }
-                    
+
                     if (line.startsWith("data:")) {
                         val json = line.substring(5).trim()
                         if (json != "[DONE]") {
                             try {
+                                // H2 Debug: 打印前3个 SSE chunk 的原始 JSON
+                                android.util.Log.d("NecoreSSE", "RAW: ${json.take(300)}")
                                 val chunk = gson.fromJson(json, StreamResponse::class.java)
                                 val firstChoice = chunk.choices?.firstOrNull()
                                 val delta = firstChoice?.delta
                                 val usage = chunk.usage
-                                
+
                                 // Map custom response field for reasoning if needed
                                 val reasoningContent = if (config.featureReasoning?.responseField != null && config.featureReasoning.responseField != "reasoning_content") {
-                                    delta?.reasoning_content 
+                                    delta?.reasoning_content
                                 } else {
                                     delta?.reasoning_content
                                 }
 
                                 // D3: Tool Calls 透传
                                 val toolCallsStr = delta?.tool_calls?.toString()
+
+                                // H2 Debug: 追踪原始 reasoning 数据
+                                if (reasoningContent != null) {
+                                    android.util.Log.d("NecoreDebug", "SSE reasoning_content: len=${reasoningContent.length}")
+                                }
 
                                 emit(ApiService.ApiResponseChunk(
                                     content = delta?.content,
@@ -186,6 +209,8 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
                         }
                     }
                 }
+            } finally {
+                source.close()
             }
         } else {
             // Check for B2: Token Backoff signals (HTTP 400 Context Length Exceeded)

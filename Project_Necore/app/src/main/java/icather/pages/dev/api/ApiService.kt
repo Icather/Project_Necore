@@ -60,6 +60,12 @@ interface ApiService {
     fun getCompletion(messages: List<ApiMessage>, apiKey: String, options: Map<String, Any> = emptyMap()): Flow<ApiResponseChunk>
 
     /**
+     * H3: 取消当前正在进行的 API 请求。
+     * 断开 TCP 连接，使服务端停止生成 token。
+     */
+    fun cancelCurrentRequest() {}
+
+    /**
      * Performs OCR on an image and returns the recognized text.
      * @param imageUri The URI of the image to perform OCR on.
      * @param apiKey The API key to use for the request.

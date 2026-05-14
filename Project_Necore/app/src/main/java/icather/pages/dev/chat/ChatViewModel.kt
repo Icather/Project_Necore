@@ -35,7 +35,8 @@ data class ChatUiState(
     val isThinkingModeEnabled: Boolean = false,
     val currentEmotion: EmotionState = EmotionState.Neutral,  // D4: AI 当前情绪
     val conversations: List<icather.pages.dev.db.Conversation> = emptyList(),  // H1: 侧边栏对话列表
-    val drawerSearchQuery: String = ""  // H1: 侧边栏搜索关键词
+    val drawerSearchQuery: String = "",  // H1: 侧边栏搜索关键词
+    val isGenerating: Boolean = false  // H3: 是否正在生成回复
 )
 
 class ChatViewModel(
@@ -46,6 +47,7 @@ class ChatViewModel(
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private var apiService: ApiService? = null
+    private var currentGenerationJob: kotlinx.coroutines.Job? = null  // H3: 当前生成任务引用
 
     init {
         viewModelScope.launch {
@@ -199,14 +201,29 @@ class ChatViewModel(
             val dbMessages = repository.getMessagesForConversation(conversationId)
             
             val newMessages = dbMessages.map { 
+                // H2: 解析存储的思考链标记 — 兼容新旧格式
+                val thinkRegex = Regex("<think>(.*?)</think>", RegexOption.DOT_MATCHES_ALL)
+                val fontRegex = Regex("<font color='#999999'>(.*?)</font><br>", RegexOption.DOT_MATCHES_ALL)
+                val thinkMatch = thinkRegex.find(it.text)
+                val fontMatch = fontRegex.find(it.text)
+                val reasoning = thinkMatch?.groupValues?.get(1) ?: fontMatch?.groupValues?.get(1) ?: ""
+                val cleanText = if (thinkMatch != null) {
+                    it.text.replace(thinkRegex, "")
+                } else if (fontMatch != null) {
+                    it.text.replace(fontRegex, "")
+                } else {
+                    it.text
+                }
+                
                 ChatMessage(
-                    text = it.text, 
+                    text = cleanText, 
                     isUser = it.isUser, 
                     isHtml = it.isHtml,
                     inputTokens = it.inputTokens,
                     outputTokens = it.outputTokens,
                     cacheHitTokens = it.cacheHitTokens,
-                    messageId = it.id
+                    messageId = it.id,
+                    reasoningText = reasoning
                 ) 
             }
             
@@ -228,7 +245,7 @@ class ChatViewModel(
             return
         }
 
-        viewModelScope.launch {
+        currentGenerationJob = viewModelScope.launch {
             if (config?.modelName == "OCR") {
                 val imageUri = images.first()
                 val fileName = "Image" // simplified
@@ -279,10 +296,46 @@ class ChatViewModel(
         }
     }
 
+    // H3: 终止生成
+    fun stopGenerating() {
+        // 1. 断开 HTTP 连接 — 让服务端立即停止生成 token
+        apiService?.cancelCurrentRequest()
+        // 2. 取消协程 — 停止本地数据处理
+        currentGenerationJob?.cancel()
+        currentGenerationJob = null
+        // 将当前流式消息标记为已完成
+        val messages = _uiState.value.messages.toMutableList()
+        val streamingIdx = messages.indexOfLast { it.isStreaming }
+        if (streamingIdx >= 0) {
+            val msg = messages[streamingIdx]
+            val stoppedText = msg.text + "\n\n[⏹ 已手动终止]"
+            messages[streamingIdx] = msg.copy(text = stoppedText, isStreaming = false)
+            _uiState.value = _uiState.value.copy(messages = messages, isGenerating = false)
+
+            // 保存已生成的部分内容到 DB
+            val conversationId = _uiState.value.currentConversationId
+            if (conversationId != null) {
+                viewModelScope.launch {
+                    val dbText = if (msg.reasoningText.isNotBlank()) {
+                        "<think>${msg.reasoningText}</think>${stoppedText}"
+                    } else {
+                        stoppedText
+                    }
+                    repository.saveMessage(conversationId, dbText, false, isHtml = true,
+                        inputTokens = msg.inputTokens, outputTokens = msg.outputTokens, cacheHitTokens = msg.cacheHitTokens)
+                }
+            }
+        } else {
+            _uiState.value = _uiState.value.copy(isGenerating = false)
+        }
+    }
+
     private suspend fun getAIResponse(conversationId: Long, config: ApiConfig) {
+        _uiState.value = _uiState.value.copy(isGenerating = true)
         val apiKey = config.apiKey
         if (apiKey.isEmpty()) {
             addMessageToView(ChatMessage("API Key not set.", false))
+            _uiState.value = _uiState.value.copy(isGenerating = false)
             return
         }
 
@@ -425,7 +478,10 @@ class ChatViewModel(
             }
             .collect { chunk ->
                 chunk.content?.let { finalContent.append(it) }
-                chunk.reasoning?.let { finalReasoning.append(it) }
+                chunk.reasoning?.let { 
+                    finalReasoning.append(it)
+                    android.util.Log.d("NecoreDebug", "REASONING chunk received: len=${it.length}, total=${finalReasoning.length}")
+                }
                 chunk.toolCalls?.let { accumulatedToolCalls.append(it) }
                 if (chunk.finishReason == "tool_calls") detectedToolCallFinish = true
                 
@@ -439,10 +495,8 @@ class ChatViewModel(
                 val now = System.currentTimeMillis()
                 if (now - lastUiUpdateTime >= uiThrottleMs) {
                     lastUiUpdateTime = now
-                    val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
                     val cleanedContent = finalContent.toString().replace(Regex("""\[emotion:\w+]"""), "")
-                    val displayText = reasoningText + cleanedContent
-                    updateMessageAt(aiMessageIndex, displayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = true)
+                    updateMessageAt(aiMessageIndex, cleanedContent, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = true, reasoningText = finalReasoning.toString())
                 }
             }
 
@@ -507,19 +561,15 @@ class ChatViewModel(
         // D1: 流结束 — 最终全量刷新 + 关闭 isStreaming 标记
         // 关键守卫：如果 catch 中已经设置了错误消息，不要用空内容覆盖它
         if (!errorOccurred && !fallbackTriggered) {
-            val reasoningText = if (finalReasoning.isNotEmpty()) "<font color='#999999'>${finalReasoning}</font><br>" else ""
-            var finalDisplayText = reasoningText + finalContent.toString()
-
             // D4: 情绪解析 — 从回复中提取情绪标签并更新 UI 状态
             val emotionResult = EmotionParser.parse(finalContent.toString())
             _uiState.value = _uiState.value.copy(currentEmotion = emotionResult.emotion)
-            // 使用清除了情绪标签的文本显示
-            finalDisplayText = reasoningText + emotionResult.cleanText
 
-            updateMessageAt(aiMessageIndex, finalDisplayText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = false)
+            updateMessageAt(aiMessageIndex, emotionResult.cleanText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = false, reasoningText = finalReasoning.toString())
 
+            // DB 存储：reasoning 用 <think> 标签包裹，便于历史加载时解析
             val dbMessageText = if (finalReasoning.isNotEmpty()) {
-                "<font color='#999999'>${finalReasoning}</font><br>${emotionResult.cleanText}"
+                "<think>${finalReasoning}</think>${emotionResult.cleanText}"
             } else {
                 emotionResult.cleanText
             }
@@ -572,23 +622,20 @@ class ChatViewModel(
                             val now = System.currentTimeMillis()
                             if (now - lastUiUpdateTime >= uiThrottleMs) {
                                 lastUiUpdateTime = now
-                                val fbReasoningText = if (fbReasoning.isNotEmpty()) "<font color='#999999'>${fbReasoning}</font><br>" else ""
                                 val fbClean = fbContent.toString().replace(Regex("""\[emotion:\w+]"""), "")
-                                updateMessageAt(aiMessageIndex, fbReasoningText + fbClean, fbInputTokens, fbOutputTokens, fbCacheHitTokens, isStreaming = true)
+                                updateMessageAt(aiMessageIndex, fbClean, fbInputTokens, fbOutputTokens, fbCacheHitTokens, isStreaming = true, reasoningText = fbReasoning.toString())
                             }
                         }
 
                     if (fbSuccess && fbContent.isNotEmpty()) {
                         // Fallback 成功 — 最终显示
-                        val fbReasoningText = if (fbReasoning.isNotEmpty()) "<font color='#999999'>${fbReasoning}</font><br>" else ""
                         val fbEmotionResult = EmotionParser.parse(fbContent.toString())
-                        val fbFinalText = fbReasoningText + fbEmotionResult.cleanText
-                        val fbNote = "<font color='#FF9800'>[⚡ 已自动降级至 ${fallbackConfig.name}]</font><br>"
-                        updateMessageAt(aiMessageIndex, fbNote + fbFinalText, fbInputTokens, fbOutputTokens, fbCacheHitTokens, isStreaming = false)
+                        val fbNote = "[⚡ 已自动降级至 ${fallbackConfig.name}]\n"
+                        updateMessageAt(aiMessageIndex, fbNote + fbEmotionResult.cleanText, fbInputTokens, fbOutputTokens, fbCacheHitTokens, isStreaming = false, reasoningText = fbReasoning.toString())
 
-                        // 更新 DB 中的消息（覆盖之前可能保存的空内容）
+                        // 更新 DB 中的消息
                         val fbDbText = if (fbReasoning.isNotEmpty()) {
-                            "<font color='#999999'>${fbReasoning}</font><br>${fbEmotionResult.cleanText}"
+                            "<think>${fbReasoning}</think>${fbEmotionResult.cleanText}"
                         } else {
                             fbEmotionResult.cleanText
                         }
@@ -612,6 +659,10 @@ class ChatViewModel(
             // 所有备选都失败
             updateMessageAt(aiMessageIndex, "⚠️ 所有模型均不可用。请检查 API 配置。", isStreaming = false)
         }
+
+        // H3: 生成结束
+        _uiState.value = _uiState.value.copy(isGenerating = false)
+        currentGenerationJob = null
     }
 
     private fun addMessageToView(message: ChatMessage) {
@@ -620,7 +671,7 @@ class ChatViewModel(
         _uiState.value = _uiState.value.copy(messages = current)
     }
 
-    private fun updateMessageAt(index: Int, text: String, inputTokens: Int? = null, outputTokens: Int? = null, cacheHitTokens: Int? = null, isStreaming: Boolean = false) {
+    private fun updateMessageAt(index: Int, text: String, inputTokens: Int? = null, outputTokens: Int? = null, cacheHitTokens: Int? = null, isStreaming: Boolean = false, reasoningText: String = "") {
         val current = _uiState.value.messages.toMutableList()
         if (index < current.size) {
             current[index] = current[index].copy(
@@ -628,7 +679,8 @@ class ChatViewModel(
                 isStreaming = isStreaming,
                 inputTokens = inputTokens,
                 outputTokens = outputTokens,
-                cacheHitTokens = cacheHitTokens
+                cacheHitTokens = cacheHitTokens,
+                reasoningText = reasoningText
             )
             _uiState.value = _uiState.value.copy(messages = current)
         }

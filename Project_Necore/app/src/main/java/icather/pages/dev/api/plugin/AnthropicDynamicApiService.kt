@@ -32,6 +32,15 @@ class AnthropicDynamicApiService(private val config: ProtocolPluginJson) : ApiSe
         .readTimeout(180, TimeUnit.SECONDS) // Anthropic 扩展思考可能需要更长时间
         .build()
 
+    // H3: 当前活跃的 HTTP 请求引用
+    @Volatile
+    private var currentCall: okhttp3.Call? = null
+
+    override fun cancelCurrentRequest() {
+        currentCall?.cancel()
+        currentCall = null
+    }
+
     private val gson = GsonBuilder().create()
 
     // ===== Anthropic Messages API 请求体构建 =====
@@ -160,16 +169,22 @@ class AnthropicDynamicApiService(private val config: ProtocolPluginJson) : ApiSe
             .post(requestJson.toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = client.newCall(request).execute()
+        val call = client.newCall(request)
+        currentCall = call
+        val response = call.execute()
 
         if (response.isSuccessful) {
-            val reader = response.body?.source()?.inputStream()?.bufferedReader() ?: return@flow
+            // 流式修复：使用 Okio 原生 BufferedSource 逐行读取 SSE。
+            // 避免 Java BufferedReader 的 8KB 预读缓冲导致 SSE 小数据块被积压。
+            val source = response.body?.source() ?: return@flow
 
             // Anthropic SSE 使用 "event: xxx\ndata: {json}\n" 的双行格式
             var currentEventType = ""
 
-            reader.useLines { lines ->
-                lines.forEach { line ->
+            try {
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: break
+
                     when {
                         line.isBlank() -> {
                             // SSE 事件分隔符，重置事件类型
@@ -180,15 +195,15 @@ class AnthropicDynamicApiService(private val config: ProtocolPluginJson) : ApiSe
                         }
                         line.startsWith("data:") -> {
                             val json = line.substring(5).trim()
-                            if (json.isBlank()) return@forEach
+                            if (json.isBlank()) continue
 
                             try {
                                 val data = JsonParser.parseString(json).asJsonObject
 
                                 when (currentEventType) {
                                     "content_block_delta" -> {
-                                        val delta = data.getAsJsonObject("delta") ?: return@forEach
-                                        val deltaType = delta.get("type")?.asString ?: return@forEach
+                                        val delta = data.getAsJsonObject("delta") ?: continue
+                                        val deltaType = delta.get("type")?.asString ?: continue
 
                                         when (deltaType) {
                                             "text_delta" -> {
@@ -249,6 +264,8 @@ class AnthropicDynamicApiService(private val config: ProtocolPluginJson) : ApiSe
                         // 忽略以 : 开头的 SSE 注释
                     }
                 }
+            } finally {
+                source.close()
             }
         } else {
             val errorBody = response.body?.string()
