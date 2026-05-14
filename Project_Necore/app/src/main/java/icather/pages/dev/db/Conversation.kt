@@ -9,5 +9,6 @@ data class Conversation(
     val id: Long = 0,
     val startTime: Long = System.currentTimeMillis(),
     // Let's add a title to easily identify conversations
-    var title: String = "New Conversation"
+    var title: String = "New Conversation",
+    val isPinned: Boolean = false
 )

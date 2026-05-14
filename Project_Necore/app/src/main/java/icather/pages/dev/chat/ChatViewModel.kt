@@ -33,7 +33,9 @@ data class ChatUiState(
     val title: String = "",
     val activeProtocol: icather.pages.dev.api.plugin.ProtocolPluginJson? = null,
     val isThinkingModeEnabled: Boolean = false,
-    val currentEmotion: EmotionState = EmotionState.Neutral  // D4: AI 当前情绪
+    val currentEmotion: EmotionState = EmotionState.Neutral,  // D4: AI 当前情绪
+    val conversations: List<icather.pages.dev.db.Conversation> = emptyList(),  // H1: 侧边栏对话列表
+    val drawerSearchQuery: String = ""  // H1: 侧边栏搜索关键词
 )
 
 class ChatViewModel(
@@ -130,6 +132,56 @@ class ChatViewModel(
 
     private fun resetAttachments() {
         _uiState.value = _uiState.value.copy(attachedImages = emptyList(), attachedFiles = emptyList())
+    }
+
+    // H1: 侧边栏 — 加载对话列表
+    fun loadConversations() {
+        viewModelScope.launch {
+            val convos = if (_uiState.value.drawerSearchQuery.isBlank()) {
+                repository.getAllConversations()
+            } else {
+                repository.searchConversations(_uiState.value.drawerSearchQuery)
+            }
+            _uiState.value = _uiState.value.copy(conversations = convos)
+        }
+    }
+
+    // H1: 侧边栏 — 搜索对话
+    fun onDrawerSearch(query: String) {
+        _uiState.value = _uiState.value.copy(drawerSearchQuery = query)
+        loadConversations()
+    }
+
+    // H1: 侧边栏 — 删除对话
+    fun deleteConversation(conversationId: Long) {
+        viewModelScope.launch {
+            repository.deleteConversation(conversationId)
+            // 如果删除的是当前对话，开始新对话
+            if (_uiState.value.currentConversationId == conversationId) {
+                startNewChat()
+            }
+            loadConversations()
+        }
+    }
+
+    // H1: 侧边栏 — 置顶/取消置顶
+    fun togglePin(conversationId: Long, currentlyPinned: Boolean) {
+        viewModelScope.launch {
+            repository.setPinned(conversationId, !currentlyPinned)
+            loadConversations()
+        }
+    }
+
+    // H1: 侧边栏 — 重命名对话
+    fun renameConversation(conversationId: Long, newTitle: String) {
+        viewModelScope.launch {
+            repository.renameConversation(conversationId, newTitle)
+            // 如果重命名的是当前对话，更新标题
+            if (_uiState.value.currentConversationId == conversationId) {
+                _uiState.value = _uiState.value.copy(title = newTitle)
+            }
+            loadConversations()
+        }
     }
 
     fun startNewChat() {

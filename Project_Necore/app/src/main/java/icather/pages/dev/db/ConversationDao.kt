@@ -13,7 +13,7 @@ interface ConversationDao {
     @Update
     suspend fun update(conversation: Conversation)
 
-    @Query("SELECT * FROM conversations ORDER BY startTime DESC")
+    @Query("SELECT * FROM conversations ORDER BY isPinned DESC, startTime DESC")
     suspend fun getAllConversations(): List<Conversation>
 
     @Query("SELECT * FROM conversations WHERE id IN (:conversationIds)")
@@ -28,13 +28,21 @@ interface ConversationDao {
     @Query("DELETE FROM conversations WHERE id = :conversationId")
     suspend fun deleteById(conversationId: Long)
 
+    // 置顶/取消置顶
+    @Query("UPDATE conversations SET isPinned = :pinned WHERE id = :conversationId")
+    suspend fun setPinned(conversationId: Long, pinned: Boolean)
+
+    // 重命名对话
+    @Query("UPDATE conversations SET title = :newTitle WHERE id = :conversationId")
+    suspend fun rename(conversationId: Long, newTitle: String)
+
     // E5: 搜索 — 标题匹配 + 消息内容全文搜索
     @Query("""
         SELECT DISTINCT c.* FROM conversations c 
         LEFT JOIN messages m ON c.id = m.conversationId 
         WHERE c.title LIKE '%' || :query || '%' 
            OR m.text LIKE '%' || :query || '%'
-        ORDER BY c.startTime DESC
+        ORDER BY c.isPinned DESC, c.startTime DESC
     """)
     suspend fun searchConversations(query: String): List<Conversation>
 }

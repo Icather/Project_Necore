@@ -40,8 +40,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
-    onOpenDrawer: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToUsage: () -> Unit,
+    onNavigateToApiConfig: () -> Unit,
     onModelSelectorClick: () -> Unit,
     onImageUploadClick: () -> Unit,
     onFileUploadClick: () -> Unit
@@ -50,6 +51,14 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var inputText by remember { mutableStateOf("") }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    // 抽屉打开时刷新对话列表
+    LaunchedEffect(drawerState.currentValue) {
+        if (drawerState.currentValue == DrawerValue.Open) {
+            viewModel.loadConversations()
+        }
+    }
 
     // Scroll to bottom when messages change
     LaunchedEffect(uiState.messages.size) {
@@ -58,6 +67,36 @@ fun ChatScreen(
         }
     }
 
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            HistoryDrawerContent(
+                conversations = uiState.conversations,
+                currentConversationId = uiState.currentConversationId,
+                searchQuery = uiState.drawerSearchQuery,
+                onSearchChanged = { viewModel.onDrawerSearch(it) },
+                onConversationClick = { id ->
+                    viewModel.loadConversation(id)
+                    coroutineScope.launch { drawerState.close() }
+                },
+                onDeleteConversation = { viewModel.deleteConversation(it) },
+                onTogglePin = { id, pinned -> viewModel.togglePin(id, pinned) },
+                onRenameConversation = { id, title -> viewModel.renameConversation(id, title) },
+                onNavigateToSettings = {
+                    coroutineScope.launch { drawerState.close() }
+                    onNavigateToSettings()
+                },
+                onNavigateToUsage = {
+                    coroutineScope.launch { drawerState.close() }
+                    onNavigateToUsage()
+                },
+                onNavigateToApiConfig = {
+                    coroutineScope.launch { drawerState.close() }
+                    onNavigateToApiConfig()
+                }
+            )
+        }
+    ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -76,13 +115,13 @@ fun ChatScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
+                    IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
                         Icon(Icons.Filled.Menu, contentDescription = "Menu")
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Filled.AddCircleOutline, contentDescription = "New Chat/Settings") // Using add icon as per screenshot top right
+                    IconButton(onClick = { viewModel.startNewChat() }) {
+                        Icon(Icons.Filled.AddCircleOutline, contentDescription = "New Chat")
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -252,7 +291,8 @@ fun ChatScreen(
                 }
             }
         }
-    }
+    } // Scaffold
+    } // ModalNavigationDrawer
 }
 
 @Composable
@@ -512,4 +552,217 @@ fun Chip(text: String, onRemove: () -> Unit) {
             )
         }
     }
+}
+
+// ===== H1: DeepSeek 风格侧边栏 =====
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HistoryDrawerContent(
+    conversations: List<icather.pages.dev.db.Conversation>,
+    currentConversationId: Long?,
+    searchQuery: String,
+    onSearchChanged: (String) -> Unit,
+    onConversationClick: (Long) -> Unit,
+    onDeleteConversation: (Long) -> Unit,
+    onTogglePin: (Long, Boolean) -> Unit,
+    onRenameConversation: (Long, String) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToUsage: () -> Unit,
+    onNavigateToApiConfig: () -> Unit
+) {
+    ModalDrawerSheet(
+        modifier = Modifier.fillMaxWidth(0.82f)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 搜索栏
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchChanged,
+                placeholder = { Text("搜索聊天内容...", style = MaterialTheme.typography.bodyMedium) },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(24.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            // 对话列表（按时间分组）
+            val grouped = remember(conversations) { groupConversationsByTime(conversations) }
+
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                grouped.forEach { (label, convos) ->
+                    item {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                    items(convos.size) { index ->
+                        val conv = convos[index]
+                        ConversationDrawerItem(
+                            conversation = conv,
+                            isActive = conv.id == currentConversationId,
+                            onClick = { onConversationClick(conv.id) },
+                            onDelete = { onDeleteConversation(conv.id) },
+                            onTogglePin = { onTogglePin(conv.id, conv.isPinned) },
+                            onRename = { newTitle -> onRenameConversation(conv.id, newTitle) }
+                        )
+                    }
+                }
+            }
+
+            // 底部快捷入口
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                DrawerBottomButton(Icons.Filled.Settings, "设置", onNavigateToSettings)
+                DrawerBottomButton(Icons.Filled.BarChart, "用量", onNavigateToUsage)
+                DrawerBottomButton(Icons.Filled.Key, "API", onNavigateToApiConfig)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawerBottomButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Transparent,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ConversationDrawerItem(
+    conversation: icather.pages.dev.db.Conversation,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    onTogglePin: () -> Unit,
+    onRename: (String) -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameText by remember { mutableStateOf("") }
+
+    Box {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .clickable { onClick() },
+            shape = RoundedCornerShape(12.dp),
+            color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (conversation.isPinned) {
+                    Icon(Icons.Filled.PushPin, contentDescription = "Pinned", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                Text(
+                    text = conversation.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { showMenu = true }, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.MoreHoriz, contentDescription = "More", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                }
+            }
+        }
+
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenuItem(
+                text = { Text(if (conversation.isPinned) "取消置顶" else "置顶") },
+                leadingIcon = { Icon(Icons.Filled.PushPin, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                onClick = { onTogglePin(); showMenu = false }
+            )
+            DropdownMenuItem(
+                text = { Text("重命名") },
+                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                onClick = { renameText = conversation.title; showRenameDialog = true; showMenu = false }
+            )
+            DropdownMenuItem(
+                text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error) },
+                onClick = { onDelete(); showMenu = false }
+            )
+        }
+    }
+
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("重命名对话") },
+            text = {
+                OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            },
+            confirmButton = { TextButton(onClick = { onRename(renameText); showRenameDialog = false }) { Text("确定") } },
+            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("取消") } }
+        )
+    }
+}
+
+/** H1: 对话按时间分组 */
+private fun groupConversationsByTime(conversations: List<icather.pages.dev.db.Conversation>): List<Pair<String, List<icather.pages.dev.db.Conversation>>> {
+    val calendar = java.util.Calendar.getInstance()
+    calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+    calendar.set(java.util.Calendar.MINUTE, 0)
+    calendar.set(java.util.Calendar.SECOND, 0)
+    calendar.set(java.util.Calendar.MILLISECOND, 0)
+    val todayStart = calendar.timeInMillis
+    val yesterdayStart = todayStart - 86400000L
+    val weekStart = todayStart - 7 * 86400000L
+    val monthStart = todayStart - 30 * 86400000L
+
+    val pinned = conversations.filter { it.isPinned }
+    val unpinned = conversations.filter { !it.isPinned }
+
+    val result = mutableListOf<Pair<String, List<icather.pages.dev.db.Conversation>>>()
+    if (pinned.isNotEmpty()) result.add("置顶" to pinned)
+
+    val today = unpinned.filter { it.startTime >= todayStart }
+    val yesterday = unpinned.filter { it.startTime in yesterdayStart until todayStart }
+    val week = unpinned.filter { it.startTime in weekStart until yesterdayStart }
+    val month = unpinned.filter { it.startTime in monthStart until weekStart }
+    val older = unpinned.filter { it.startTime < monthStart }
+
+    if (today.isNotEmpty()) result.add("今天" to today)
+    if (yesterday.isNotEmpty()) result.add("昨天" to yesterday)
+    if (week.isNotEmpty()) result.add("7 天内" to week)
+    if (month.isNotEmpty()) result.add("30 天内" to month)
+    if (older.isNotEmpty()) result.add("更早" to older)
+
+    return result
 }

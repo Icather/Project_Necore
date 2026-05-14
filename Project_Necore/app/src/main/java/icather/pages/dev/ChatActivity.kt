@@ -60,14 +60,14 @@ class ChatActivity : AppCompatActivity() {
             Project_NecoreTheme {
                 ChatScreen(
                     viewModel = viewModel,
-                    onOpenDrawer = { 
-                        // Simplified drawer for Compose, or you can integrate standard ModalNavigationDrawer
-                        // Here we just navigate to history for demonstration
-                        val intent = Intent(this, HistoryActivity::class.java)
-                        historyLauncher.launch(intent)
-                    },
                     onNavigateToSettings = {
                         startActivity(Intent(this, SettingsActivity::class.java))
+                    },
+                    onNavigateToUsage = {
+                        startActivity(Intent(this, UsageActivity::class.java))
+                    },
+                    onNavigateToApiConfig = {
+                        startActivity(Intent(this, ApiConfigActivity::class.java))
                     },
                     onModelSelectorClick = {
                         showModelSelector()

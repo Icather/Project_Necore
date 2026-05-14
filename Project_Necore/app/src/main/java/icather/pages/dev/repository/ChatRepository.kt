@@ -88,5 +88,31 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
     suspend fun deleteLastMessage(conversationId: Long) = withContext(Dispatchers.IO) {
         db.messageDao().deleteLastMessage(conversationId)
     }
+
+    // H1: 侧边栏 — 获取全部对话列表
+    suspend fun getAllConversations(): List<Conversation> = withContext(Dispatchers.IO) {
+        db.conversationDao().getAllConversations()
+    }
+
+    // H1: 侧边栏 — 搜索对话
+    suspend fun searchConversations(query: String): List<Conversation> = withContext(Dispatchers.IO) {
+        db.conversationDao().searchConversations(query)
+    }
+
+    // H1: 侧边栏 — 删除对话
+    suspend fun deleteConversation(conversationId: Long) = withContext(Dispatchers.IO) {
+        db.messageDao().deleteByConversationId(conversationId)
+        db.conversationDao().deleteById(conversationId)
+    }
+
+    // H1: 侧边栏 — 置顶/取消置顶
+    suspend fun setPinned(conversationId: Long, pinned: Boolean) = withContext(Dispatchers.IO) {
+        db.conversationDao().setPinned(conversationId, pinned)
+    }
+
+    // H1: 侧边栏 — 重命名对话
+    suspend fun renameConversation(conversationId: Long, newTitle: String) = withContext(Dispatchers.IO) {
+        db.conversationDao().rename(conversationId, newTitle)
+    }
 }
 

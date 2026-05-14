@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class], version = 8, exportSchema = false)
+@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun conversationDao(): ConversationDao
@@ -31,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "chat_database"
-                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                  .fallbackToDestructiveMigration(true)
                  .addCallback(AppDatabaseCallback(context))
                  .build()
@@ -101,6 +101,13 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("INSERT INTO `prompt_templates` (`name`, `icon`, `systemPrompt`, `isBuiltIn`) VALUES ('写作助手', '✍️', '你是一位出色的写作顾问。帮助用户润色文章、修改语法、优化表达。保持用户原有的写作风格，让文字更流畅、更有说服力。', 1)")
                 database.execSQL("INSERT INTO `prompt_templates` (`name`, `icon`, `systemPrompt`, `isBuiltIn`) VALUES ('学习导师', '📚', '你是一位耐心的学习导师。用通俗易懂的语言解释复杂概念，善用类比和例子。当学生困惑时，从不同角度重新解释，直到他们理解为止。', 1)")
                 database.execSQL("INSERT INTO `prompt_templates` (`name`, `icon`, `systemPrompt`, `isBuiltIn`) VALUES ('创意头脑风暴', '💡', '你是一位富有创造力的头脑风暴伙伴。针对用户提出的主题，快速产出多个新颖、有趣的创意方向。不要自我审查，鼓励大胆的想法。', 1)")
+            }
+        }
+
+        // H1: 侧边栏重构 — 对话置顶功能
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `conversations` ADD COLUMN `isPinned` INTEGER NOT NULL DEFAULT 0")
             }
         }
     }
