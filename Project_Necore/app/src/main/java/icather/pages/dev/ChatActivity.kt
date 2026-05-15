@@ -9,8 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.view.ContextThemeWrapper
-import androidx.appcompat.widget.PopupMenu
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import icather.pages.dev.chat.ChatViewModel
 import icather.pages.dev.db.AppDatabase
@@ -69,9 +67,6 @@ class ChatActivity : AppCompatActivity() {
                     onNavigateToApiConfig = {
                         startActivity(Intent(this, ApiConfigActivity::class.java))
                     },
-                    onModelSelectorClick = {
-                        showModelSelector()
-                    },
                     onImageUploadClick = {
                         imagePickerLauncher.launch("image/*")
                     },
@@ -81,23 +76,6 @@ class ChatActivity : AppCompatActivity() {
                 )
             }
         }
-    }
-
-    private fun showModelSelector() {
-        // Find a view anchor for PopupMenu, or better yet, migrate PopupMenu to Compose DropdownMenu
-        // Since we are in setContent, we can create a simple Compose implementation in ChatScreen, 
-        // but to keep the scope of this refactor clean, we'll keep the basic concept.
-        // Actually, let's just trigger a standard Android AlertDialog for simplicity here
-        val configs = viewModel.uiState.value.apiConfigs
-        if (configs.isEmpty()) return
-        
-        val names = configs.map { "${it.provider} | ${it.modelName}" }.toTypedArray()
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Select Model")
-            .setItems(names) { _, which ->
-                viewModel.onModelSelected(configs[which])
-            }
-            .show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

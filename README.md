@@ -35,8 +35,12 @@
 ### 3.4 终止生成功能 (Stop Generating)
 输入栏的发送按钮在 AI 生成过程中自动切换为红色终止按钮。点击后立即断开底层 TCP 连接（`OkHttp Call.cancel()`），已生成的部分内容保留并持久化到数据库。
 
-### 3.5 提供商分组选择器 (Provider Groups)
-API 配置对话框中，提供商下拉按 `base_url` 聚合（域名映射识别），将原来 19+ 个插件条目聚合为约 8 个提供商分组。选中提供商后，模型下拉动态展示该平台下所有可用模型预设，同时支持手动输入自定义模型名称。
+### 3.5 提供商/模型分离式选择器 (Split Provider/Model Selector)
+聊天界面底部输入栏采用双行布局：
+- **第一行**：功能开关（深度思考等）
+- **第二行**：提供商 chip + 模型 chip + 操作按钮
+
+提供商 chip 按 `base_url` 聚合，点击弹出 DropdownMenu 切换提供商（切换 API key 和服务实例）。模型 chip 展示当前提供商下所有可用模型，点击切换只改内存中的 `modelName`，无需重建 ApiService。用户只需每个提供商配一条 ApiConfig（提供 API key），即可自由切换该提供商下的所有模型。
 
 ### 3.6 性能监控：实时 Token 与缓存命中率 (Token & Cache Hit Metrics)
 为直观量化上下文管理策略的性能收益，项目已实装并持久化了全链路 Token 监控架构：
@@ -116,7 +120,7 @@ API 配置对话框中，提供商下拉按 `base_url` 聚合（域名映射识�
 1. **当前模型**：`deepseek-v4-pro`（复杂推理/编程/Agent，1.6T参数49B活跃）、`deepseek-v4-flash`（快速推理/低延迟，284B参数13B活跃）。上下文窗口 **1M token**，最大输出 **384K token**。旧名 `deepseek-chat`/`deepseek-reasoner` 将于 2026-07-24 退役。
 2. **网络连接基建**：兼容 OpenAI SDK 格式。流处理超长推理时会发送空行或 `: keep-alive` 防止超时。需实现指数退避重试 (Exponential Backoff)。
 3. **上下文硬盘缓存（KV Cache）**：默认开启。缓存匹配策略极其严苛（按前缀绝对匹配）。**开发建议**：进行截断和系统 Prompt 注入时，必须保证前缀绝对稳定。
-4. **思考模式 (Thinking Mode)**：启用时需提供 `extra_body={"thinking": {"type": "enabled"}}`。**绝对禁忌**：多轮对话若未发生工具调用，严禁将历史对话中的思维链 (`reasoning_content`) 重新拼接上传，否则易引发 HTTP 400 且破坏缓存。
+4. **思考模式 (Thinking Mode)**：启用时需提供 `extra_body={"thinking": {"type": "enabled"}}`。**关闭时必须显式发送** `{"thinking": {"type": "disabled"}}`，因为该模型默认开启思考（通过协议插件的 `disable_payload` 字段声明）。**绝对禁忌**：多轮对话若未发生工具调用，严禁将历史对话中的思维链 (`reasoning_content`) 重新拼接上传，否则易引发 HTTP 400 且破坏缓存。
 
 ## 6. 进阶路线图 (Roadmap)
 

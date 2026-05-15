@@ -1,7 +1,7 @@
-ï»¿{
+{
   "provider_info": {
     "id": "qwen3.5-omni-plus",
-    "display_name": "åƒé—® Qwen3.5-Omni-Plus (ç™¾ç‚¼)",
+    "display_name": "Ç§ÎÊ Qwen3.5-Omni-Plus (°ÙÁ¶)",
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "is_openai_compatible": true,
     "available_models": ["qwen3.6-max-preview","qwen3.6-plus","qwen3.6-flash","qwen3.5-omni-plus","qwq-plus","deepseek-v4-pro","deepseek-v4-flash","glm-5.1","kimi-k2.6","MiniMax-M2.5","qwen-turbo-latest","qwen-plus-latest","qwen-max-latest"]
@@ -10,6 +10,7 @@
     "supported": true,
     "trigger_type": "extra_body",
     "trigger_payload": {"enable_thinking": true},
+    "disable_payload": {"enable_thinking": false},
     "response_field": "reasoning_content",
     "allows_temperature": true
   },

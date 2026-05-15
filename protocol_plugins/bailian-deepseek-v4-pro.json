@@ -1,4 +1,4 @@
-﻿{
+{
   "provider_info": {
     "id": "deepseek-v4-pro",
     "display_name": "DeepSeek V4 Pro (百炼)",
@@ -10,6 +10,7 @@
     "supported": true,
     "trigger_type": "extra_body",
     "trigger_payload": {"enable_thinking": true},
+    "disable_payload": {"enable_thinking": false},
     "response_field": "reasoning_content",
     "allows_temperature": false
   },

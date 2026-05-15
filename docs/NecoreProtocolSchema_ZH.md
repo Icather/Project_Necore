@@ -26,11 +26,13 @@
 "feature_reasoning": {
   "supported": true,
   "trigger_type": "extra_body", // 触发方式：'extra_body', 'param' 或 'system_prompt'
-  "trigger_payload": {"thinking": {"type": "enabled"}}, // 实际需注入的 Payload 载荷
+  "trigger_payload": {"thinking": {"type": "enabled"}}, // 开启思考时实际需注入的 Payload 载荷
+  "disable_payload": {"thinking": {"type": "disabled"}}, // 显式关闭思考时需注入的 Payload（针对默认开启思考的模型）
   "response_field": "reasoning_content", // API 响应包中包含思考过程的专属字段名
   "allows_temperature": false // 若为 false，App 在发起请求前必须强制剥离 'temperature' 参数
 }
 ```
+- `disable_payload`：可选字段。用于 DeepSeek V4 等**默认开启思考模式**的模型。当用户关闭思考时，App 必须注入此 Payload 以显式禁用思考。若未定义，App 仅省略 `trigger_payload` 即可。
 
 ### 2.3 KV 缓存控制策略 (`feature_cache`)
 定义 App 应当如何管理历史记录截断与前缀，从而最优化 Token 成本。
@@ -166,13 +168,14 @@ Claude Sonnet 4.6+ 支持通过 `thinking` 响应字段返回扩展思考链，�
 ```
 
 ### 3.3 DeepSeek 示例 (`deepseek-v4-pro.json`)
-DeepSeek 依赖隐式缓存，且在开启推理思考模式时严格禁止传入 temperature 参数。
+DeepSeek 依赖隐式缓存，且在开启推理思考模式时严格禁止传入 temperature 参数。该模型**默认开启思考模式**，需要显式发送 `disable_payload` 才能关闭。
 ```json
 {
   "feature_reasoning": {
     "supported": true,
     "trigger_type": "extra_body",
     "trigger_payload": {"thinking": {"type": "enabled"}},
+    "disable_payload": {"thinking": {"type": "disabled"}},
     "allows_temperature": false
   },
   "feature_cache": {
@@ -184,3 +187,10 @@ DeepSeek 依赖隐式缓存，且在开启推理思考模式时严格禁止传�
 
 ## 4. 客户端落地实现指导 (App-Side Kotlin Implementation)
 Android 客户端在运行时，会将这些 JSON 插件反序列化为全局的 `ProtocolSchema` Kotlin 数据类。UI 渲染层和底层网络层将绝对且仅依赖这些布尔值/枚举值进行动态适配。以此实现 App 业务逻辑与各大模型厂商的彻底解耦。
+
+### 4.1 推理模式逻辑
+当用户切换思考模式时：
+- **开启**：App 将 `trigger_payload` 注入请求体。
+- **关闭**：若插件定义了 `disable_payload`，App 会注入该载荷以显式关闭思考；否则仅省略 `trigger_payload`。
+
+此双载荷设计同时兼容“选择性开启”模型（如 Anthropic Claude）和“默认开启”模型（如 DeepSeek V4）。

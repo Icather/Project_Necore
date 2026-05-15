@@ -43,7 +43,6 @@ fun ChatScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToUsage: () -> Unit,
     onNavigateToApiConfig: () -> Unit,
-    onModelSelectorClick: () -> Unit,
     onImageUploadClick: () -> Unit,
     onFileUploadClick: () -> Unit
 ) {
@@ -210,40 +209,117 @@ fun ChatScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Bottom Row: Pills (Left) and Actions (Right)
+                    // ===== 提供商/模型 下拉数据 =====
+                    val providerGroups = remember { icather.pages.dev.api.plugin.ProtocolRegistry.getProviderGroups() }
+                    val activeProviderGroup = remember(uiState.activeApiConfig?.provider) {
+                        providerGroups.find { uiState.activeApiConfig?.provider in it.pluginIds }
+                    }
+                    // 只展示用户已配置过的提供商（有 ApiConfig 的）
+                    val userProviders = remember(uiState.apiConfigs) {
+                        val configuredProviders = uiState.apiConfigs.map { it.provider }.toSet()
+                        providerGroups.filter { group -> group.pluginIds.any { it in configuredProviders } }
+                    }
+                    val availableModels = activeProviderGroup?.availableModels ?: emptyList()
+                    val providerDisplayName = activeProviderGroup?.displayName ?: uiState.activeApiConfig?.provider ?: "提供商"
+                    val currentModelName = uiState.activeApiConfig?.modelName ?: "模型"
+
+                    // Row 1: Feature toggles
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (uiState.activeProtocol?.featureReasoning?.supported == true) {
+                            val isThinking = uiState.isThinkingModeEnabled
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isThinking) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent,
+                                border = BorderStroke(1.dp, if (isThinking) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant),
+                                modifier = Modifier.height(32.dp).clickable { viewModel.toggleThinkingMode(!isThinking) }
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                    Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("深度思考", style = MaterialTheme.typography.labelMedium, color = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Row 2: Provider + Model selectors (Left) + Actions (Right)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Left: Mode Pills
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (uiState.activeProtocol?.featureReasoning?.supported == true) {
-                                val isThinking = uiState.isThinkingModeEnabled
+                        // Left: Provider + Model chips
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f, fill = false)) {
+                            // Provider selector chip
+                            var providerExpanded by remember { mutableStateOf(false) }
+                            Box {
                                 Surface(
                                     shape = RoundedCornerShape(16.dp),
-                                    color = if (isThinking) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent,
-                                    border = BorderStroke(1.dp, if (isThinking) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant),
-                                    modifier = Modifier.height(32.dp).clickable { viewModel.toggleThinkingMode(!isThinking) }
+                                    color = Color.Transparent,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+                                    modifier = Modifier.height(32.dp).clickable { providerExpanded = true }
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
-                                        Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp)) {
+                                        Icon(Icons.Filled.Dns, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("深度思考", style = MaterialTheme.typography.labelMedium, color = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(providerDisplayName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                    }
+                                }
+                                DropdownMenu(expanded = providerExpanded, onDismissRequest = { providerExpanded = false }) {
+                                    userProviders.forEach { group ->
+                                        DropdownMenuItem(
+                                            text = { Text(group.displayName) },
+                                            onClick = {
+                                                // 找到该提供商组下用户已配置的第一个 pluginId 并切换
+                                                val targetProvider = group.pluginIds.firstOrNull { pid ->
+                                                    uiState.apiConfigs.any { it.provider == pid }
+                                                } ?: return@DropdownMenuItem
+                                                viewModel.switchProvider(targetProvider)
+                                                providerExpanded = false
+                                            }
+                                        )
                                     }
                                 }
                             }
 
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = Color.Transparent,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
-                                modifier = Modifier.height(32.dp).clickable { onModelSelectorClick() }
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
-                                    Icon(Icons.Filled.Language, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(uiState.activeApiConfig?.provider ?: "模型", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            // Model selector chip
+                            var modelExpanded by remember { mutableStateOf(false) }
+                            Box {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color.Transparent,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                                    modifier = Modifier.height(32.dp).clickable { modelExpanded = true }
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 10.dp)) {
+                                        Icon(Icons.Filled.SmartToy, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(currentModelName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
+                                    }
+                                }
+                                DropdownMenu(expanded = modelExpanded, onDismissRequest = { modelExpanded = false }) {
+                                    availableModels.forEach { model ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(model)
+                                                    if (model == currentModelName) {
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                                    }
+                                                }
+                                            },
+                                            onClick = {
+                                                viewModel.switchModel(model)
+                                                modelExpanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

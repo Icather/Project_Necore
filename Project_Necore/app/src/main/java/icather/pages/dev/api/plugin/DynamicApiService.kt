@@ -118,6 +118,10 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
             if (config.featureReasoning.allowsTemperature == false) {
                 temperature = null // Must strip temperature
             }
+        } else if (!isThinking && config.featureReasoning?.supported == true && config.featureReasoning.disablePayload != null) {
+            // 显式关闭思考模式 — DeepSeek V4 等模型默认开启思考，
+            // 不发送 disable_payload 会导致非思考模式无法激活
+            extraPayload = config.featureReasoning.disablePayload
         }
 
         // D3: Tool Calls — 从 options 中提取工具定义

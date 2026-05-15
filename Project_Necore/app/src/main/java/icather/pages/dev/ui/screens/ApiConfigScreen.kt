@@ -312,6 +312,7 @@ fun AddApiDialog(
                     value = displayName,
                     onValueChange = { displayName = it },
                     label = { Text("Display Name (显示名称)") },
+                    placeholder = { Text(modelName.ifBlank { "未选择模型" }) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -333,15 +334,17 @@ fun AddApiDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            if (selectedGroup != null && modelName.isNotBlank() && displayName.isNotBlank() && apiKey.isNotBlank()) {
+                            if (selectedGroup != null && modelName.isNotBlank() && apiKey.isNotBlank()) {
                                 // I1: 根据提供商组 + 模型名反查插件 id，保证 DB 中 provider 字段有效
                                 val pluginId = ProtocolRegistry.findPluginIdForProvider(selectedGroup!!.baseUrl, modelName)
                                     ?: selectedGroup!!.pluginIds.firstOrNull()
                                     ?: ""
-                                onSave(pluginId, modelName, displayName, apiKey)
+                                // 显示名称留空时，默认使用模型名称
+                                val finalDisplayName = displayName.ifBlank { modelName }
+                                onSave(pluginId, modelName, finalDisplayName, apiKey)
                             }
                         },
-                        enabled = selectedGroup != null && modelName.isNotBlank() && displayName.isNotBlank() && apiKey.isNotBlank()
+                        enabled = selectedGroup != null && modelName.isNotBlank() && apiKey.isNotBlank()
                     ) {
                         Text("Save")
                     }

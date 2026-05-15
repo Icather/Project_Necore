@@ -14,6 +14,11 @@
         "type": "enabled"
       }
     },
+    "disable_payload": {
+      "thinking": {
+        "type": "disabled"
+      }
+    },
     "response_field": "reasoning_content",
     "allows_temperature": false
   },

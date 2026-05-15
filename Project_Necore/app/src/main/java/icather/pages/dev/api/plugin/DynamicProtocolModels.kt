@@ -28,6 +28,7 @@ data class FeatureReasoning(
     val supported: Boolean = false,
     @SerializedName("trigger_type") val triggerType: String? = null,
     @SerializedName("trigger_payload") val triggerPayload: JsonObject? = null,
+    @SerializedName("disable_payload") val disablePayload: JsonObject? = null,
     @SerializedName("response_field") val responseField: String? = null,
     @SerializedName("allows_temperature") val allowsTemperature: Boolean = true
 )

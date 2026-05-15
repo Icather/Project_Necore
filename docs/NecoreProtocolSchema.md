@@ -26,11 +26,13 @@ Controls the handling of Chain-of-Thought (CoT) processes.
 "feature_reasoning": {
   "supported": true,
   "trigger_type": "extra_body", // How to activate it: 'extra_body', 'param', 'system_prompt'
-  "trigger_payload": {"thinking": {"type": "enabled"}}, // The exact payload to inject
+  "trigger_payload": {"thinking": {"type": "enabled"}}, // The exact payload to inject when enabling
+  "disable_payload": {"thinking": {"type": "disabled"}}, // Payload to inject when explicitly disabling (for models that default to thinking)
   "response_field": "reasoning_content", // The field name in the API response containing the thoughts
   "allows_temperature": false // If false, the App MUST strip 'temperature' from the request
 }
 ```
+- `disable_payload`: Optional. Required for models like DeepSeek V4 that **default to thinking mode**. When the user turns off reasoning, the App MUST inject this payload to explicitly disable it. If omitted, the App simply omits the trigger payload.
 
 ### 2.3 KV Cache Strategy (`feature_cache`)
 Defines how the App should manage history truncation and prefixing to optimize costs.
@@ -120,13 +122,14 @@ Hard limits that the App's Context Manager (Sliding Window) must obey.
 ## 3. Real-World Mapping Examples
 
 ### 3.1 DeepSeek Example (`deepseek-v4-pro.json`)
-DeepSeek relies on implicit caching and strictly forbids temperature when reasoning is active.
+DeepSeek relies on implicit caching, strictly forbids temperature when reasoning is active, and **defaults to thinking mode** — requiring an explicit `disable_payload` to turn it off.
 ```json
 {
   "feature_reasoning": {
     "supported": true,
     "trigger_type": "extra_body",
     "trigger_payload": {"thinking": {"type": "enabled"}},
+    "disable_payload": {"thinking": {"type": "disabled"}},
     "allows_temperature": false
   },
   "feature_cache": {
@@ -158,3 +161,10 @@ Claude Sonnet 4.6+ supports extended thinking via the `thinking` response field,
 
 ## 4. App-Side Implementation (Kotlin)
 The App will deserialize these JSON files into a master `ProtocolSchema` Kotlin Data Class. The UI and the Network Layer will exclusively read from these boolean/enum flags to adapt dynamically, achieving absolute code-level decoupling from the LLM vendors.
+
+### 4.1 Reasoning Mode Logic
+When the user toggles reasoning mode:
+- **ON**: The App injects `trigger_payload` into the request body.
+- **OFF**: If `disable_payload` is defined, the App injects it to explicitly disable thinking. Otherwise, no extra payload is sent.
+
+This two-payload design handles both "opt-in thinking" models (e.g., Anthropic Claude) and "default-thinking" models (e.g., DeepSeek V4).

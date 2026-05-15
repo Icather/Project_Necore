@@ -80,6 +80,26 @@ class ChatViewModel(
         initApiService(config)
     }
 
+    /**
+     * 切换提供商 — 从用户已配置的 ApiConfig 中找到该 provider 的第一条配置并激活。
+     * 这会切换 API key、协议插件、ApiService 实例。
+     */
+    fun switchProvider(providerKey: String) {
+        val config = _uiState.value.apiConfigs.find { it.provider == providerKey } ?: return
+        onModelSelected(config)
+    }
+
+    /**
+     * 在当前提供商内切换模型 — 只修改内存中的 modelName，不重建 ApiService。
+     * DynamicApiService 通过 options["model_name"] 获取模型名，所以不需要重新初始化。
+     */
+    fun switchModel(modelName: String) {
+        val current = _uiState.value.activeApiConfig ?: return
+        _uiState.value = _uiState.value.copy(
+            activeApiConfig = current.copy(modelName = modelName)
+        )
+    }
+
     private fun initApiService(config: ApiConfig) {
         try {
             apiService = repository.createApiService(config.provider)
