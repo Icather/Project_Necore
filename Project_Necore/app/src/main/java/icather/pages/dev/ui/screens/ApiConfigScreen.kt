@@ -158,9 +158,19 @@ fun AddApiDialog(
     onSave: (provider: String, model: String, name: String, key: String) -> Unit,
     onNavigateToPlugins: () -> Unit
 ) {
-    val providers = ProtocolRegistry.getProtocolNames()
-    var expanded by remember { mutableStateOf(false) }
-    var selectedProvider by remember { mutableStateOf(configToEdit?.provider ?: (providers.firstOrNull() ?: "")) }
+    // I1: 提供商分组 — 按 base_url 聚合，一个提供商只出现一次
+    val providerGroups = remember { ProtocolRegistry.getProviderGroups() }
+
+    // 编辑模式时，从现有 provider(pluginId) 反查到对应的提供商组
+    val initialGroup = remember(configToEdit) {
+        if (configToEdit != null) {
+            providerGroups.find { configToEdit.provider in it.pluginIds }
+        } else null
+    }
+
+    var selectedGroup by remember { mutableStateOf(initialGroup ?: providerGroups.firstOrNull()) }
+    var providerExpanded by remember { mutableStateOf(false) }
+
     var modelName by remember { mutableStateOf(configToEdit?.modelName ?: "") }
     var displayName by remember { mutableStateOf(configToEdit?.name ?: "") }
     var apiKey by remember { mutableStateOf(configToEdit?.apiKey ?: "") }
@@ -178,34 +188,40 @@ fun AddApiDialog(
             ) {
                 Text(if (configToEdit != null) "Edit API Configuration" else "Add API Configuration", style = MaterialTheme.typography.headlineSmall)
 
-                // Provider Dropdown
+                // ===== 提供商选择下拉（按 base_url 分组，约 8 个选项） =====
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                    expanded = providerExpanded,
+                    onExpandedChange = { providerExpanded = !providerExpanded }
                 ) {
                     OutlinedTextField(
-                        value = selectedProvider,
+                        value = selectedGroup?.displayName ?: "",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Provider (提供商)") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        expanded = providerExpanded,
+                        onDismissRequest = { providerExpanded = false }
                     ) {
-                        providers.forEach { provider ->
+                        providerGroups.forEach { group ->
                             DropdownMenuItem(
-                                text = { Text(provider) },
-                                onClick = {
-                                    selectedProvider = provider
-                                    expanded = false
-                                    // 切换提供商时自动填入默认模型
-                                    val models = ProtocolRegistry.getAvailableModels(provider)
-                                    if (models.isNotEmpty()) {
-                                        modelName = models.first()
+                                text = {
+                                    Column {
+                                        Text(group.displayName, style = MaterialTheme.typography.bodyLarge)
+                                        Text(
+                                            "${group.availableModels.size} 个模型可用",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        )
                                     }
+                                },
+                                onClick = {
+                                    selectedGroup = group
+                                    providerExpanded = false
+                                    // 切换提供商时自动选中第一个模型
+                                    modelName = group.availableModels.firstOrNull() ?: ""
                                 }
                             )
                         }
@@ -232,10 +248,8 @@ fun AddApiDialog(
                     )
                 }
 
-                // Model Name — 预设下拉 + 手动输入
-                val availableModels = remember(selectedProvider) {
-                    if (selectedProvider.isNotBlank()) ProtocolRegistry.getAvailableModels(selectedProvider) else emptyList()
-                }
+                // ===== 模型选择：预设下拉 + 手动输入 =====
+                val availableModels = selectedGroup?.availableModels ?: emptyList()
                 var modelExpanded by remember { mutableStateOf(false) }
                 var isCustomModel by remember { mutableStateOf(
                     configToEdit != null && configToEdit.modelName !in availableModels
@@ -319,11 +333,15 @@ fun AddApiDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            if (selectedProvider.isNotBlank() && modelName.isNotBlank() && displayName.isNotBlank() && apiKey.isNotBlank()) {
-                                onSave(selectedProvider, modelName, displayName, apiKey)
+                            if (selectedGroup != null && modelName.isNotBlank() && displayName.isNotBlank() && apiKey.isNotBlank()) {
+                                // I1: 根据提供商组 + 模型名反查插件 id，保证 DB 中 provider 字段有效
+                                val pluginId = ProtocolRegistry.findPluginIdForProvider(selectedGroup!!.baseUrl, modelName)
+                                    ?: selectedGroup!!.pluginIds.firstOrNull()
+                                    ?: ""
+                                onSave(pluginId, modelName, displayName, apiKey)
                             }
                         },
-                        enabled = selectedProvider.isNotBlank() && modelName.isNotBlank() && displayName.isNotBlank() && apiKey.isNotBlank()
+                        enabled = selectedGroup != null && modelName.isNotBlank() && displayName.isNotBlank() && apiKey.isNotBlank()
                     ) {
                         Text("Save")
                     }

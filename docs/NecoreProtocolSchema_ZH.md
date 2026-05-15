@@ -12,11 +12,13 @@
 ```json
 "provider_info": {
   "id": "deepseek-v4-pro",
-  "display_name": "DeepSeek V4 Pro",
-  "base_url": "https://api.deepseek.com",
-  "is_openai_compatible": true
+  "display_name": "DeepSeek V4 Pro (DeepSeek)",
+  "base_url": "https://api.deepseek.com/v1",
+  "is_openai_compatible": true,
+  "available_models": ["deepseek-v4-pro", "deepseek-v4-flash"]
 }
 ```
+- `available_models`: 可选字段。该提供商下可用的模型 ID 列表，供 App 的提供商分组选择器填充模型下拉。
 
 ### 2.2 推理与思考链能力 (`feature_reasoning`)
 控制如何处理思维链（Chain-of-Thought, CoT）过程。
@@ -143,12 +145,16 @@
 }
 ```
 
-### 3.2 Anthropic Claude 示例 (`claude-3-5-sonnet.json`)
-Claude 依赖显式缓存控制，并且原生 API 层面并未拆分出专属的思考链 Chunk。
+### 3.2 Anthropic Claude 示例 (`anthropic-claude-sonnet-4.6.json`)
+Claude Sonnet 4.6+ 支持通过 `thinking` 响应字段返回扩展思考链，并使用显式临时缓存策略。
 ```json
 {
   "feature_reasoning": {
-    "supported": false
+    "supported": true,
+    "trigger_type": "extra_body",
+    "trigger_payload": {"thinking": {"type": "enabled", "budget_tokens": 10000}},
+    "response_field": "thinking",
+    "allows_temperature": false
   },
   "feature_cache": {
     "supported": true,

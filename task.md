@@ -29,3 +29,10 @@
 - `[x]` **D2. Base64 多模态 OOM 防爆墙**: 新建 `ImageCompressor.kt` 压缩引擎（长边≤1568px，JPEG 75%）。在设置页面新增"图片自动压缩"用户开关：开启时自动压缩；关闭时强制校验图片总大小不超过 20MB，超限弹出警告拦截。
 - `[x]` **D3. 灵魂组件库 (Identity & User)**: 剥离固化 System Prompt，支持多重 `Identity` 配置文件加载并联动 UI 颜色主题。接入 Tool Calls 特性，赋予模型读写本地 `User.json` 档案的能力，实现跨越时空的“长期记忆”。
 - `[x]` **D4. 情绪与静默关怀 (Soul & Heartbeat)**: 设计情感变量引擎动态改变模型的心情指数。基于 Android `WorkManager` 实现 AI 后台静默唤醒，根据天气/时间向用户推送主动关怀消息，完成向“陪伴体”的终极进化。
+## 分类 E：[难度 ⭐️⭐️ | 可行性 极高] 流式体验与 UI 精细化 (Streaming & UI Polish)
+*(目标：实现真正的实时逐字输出，提升配置页面可用性)*
+- `[x]` **E1. SSE 流式输出修复 (Okio 重构)**: 将全部三个 API Service 的 SSE 解析器从 Java BufferedReader 替换为 Okio 原生 BufferedSource.readUtf8Line()，消除 8KB 预读缓冲，实现逐字实时输出。
+- `[x]` **E2. 思考链独立渲染 (H2)**: reasoning_content 作为独立字段 ChatMessage.reasoningText 存储，UI 以可折叠灰色区块渲染（默认展开），DB 存储格式从 font HTML 迁移为 think 标签。
+- `[x]` **E3. 终止生成按钮 (H3)**: 新增 isGenerating 状态与 stopGenerating() 方法，支持 OkHttp Call.cancel() 断开 TCP 连接，已生成内容保留并持久化。
+- `[x]` **E4. 提供商分组选择器 (I1)**: Provider 下拉按 base_url 域名映射聚合为约 8 个提供商组，Model 下拉显示该组下全部预设模型加手动输入选项。
+- `[x]` **E5. DeepSeek 模型更新**: 移除即将退役的 deepseek-chat/deepseek-reasoner，仅保留 deepseek-v4-pro / deepseek-v4-flash，上下文窗口更新至 1M token，最大输出 384K token。

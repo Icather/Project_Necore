@@ -110,4 +110,96 @@ object ProtocolRegistry {
         }
         return models.distinct().sorted()
     }
+
+    // ===== 提供商分组 API（UI 层使用） =====
+
+    /**
+     * 提供商分组：一个 base_url 代表一个提供商。
+     * @param baseUrl 该提供商的 API 地址
+     * @param displayName 用于 UI 展示的提供商名称
+     * @param pluginIds 该组下所有插件的 id 列表（任选一个作为 DB 中 provider 字段的值）
+     * @param availableModels 该提供商下所有可用的模型名称（去重）
+     */
+    data class ProviderGroup(
+        val baseUrl: String,
+        val displayName: String,
+        val pluginIds: List<String>,
+        val availableModels: List<String>
+    )
+
+    /**
+     * 按 base_url 聚合所有插件，返回去重的提供商分组列表。
+     * 每组使用该组中第一个插件的 display_name 作为提供商展示名。
+     */
+    fun getProviderGroups(): List<ProviderGroup> {
+        // 按 base_url 分组
+        val grouped = pluginConfigs.values
+            .filter { it.providerInfo?.baseUrl?.isNotBlank() == true }
+            .groupBy { it.providerInfo!!.baseUrl }
+
+        return grouped.map { (baseUrl, plugins) ->
+            // 提供商展示名：域名映射优先（最可靠），括号提取回退
+            val providerDisplayName = deriveProviderName(baseUrl, plugins.first())
+
+            // 收集所有模型
+            val models = mutableListOf<String>()
+            plugins.forEach { plugin ->
+                plugin.providerInfo?.id?.let { models.add(it) }
+                plugin.providerInfo?.availableModels?.let { models.addAll(it) }
+            }
+
+            ProviderGroup(
+                baseUrl = baseUrl,
+                displayName = providerDisplayName,
+                pluginIds = plugins.mapNotNull { it.providerInfo?.id },
+                availableModels = models.distinct().sorted()
+            )
+        }.sortedBy { it.displayName }
+    }
+
+    /**
+     * 根据 base_url 和模型名称，反查到对应的插件 id。
+     * 优先匹配 id 与 modelName 完全一致的插件，否则返回该组中的第一个插件 id。
+     * 这保证了 ApiConfig.provider 始终是有效的 ProtocolRegistry 键。
+     */
+    fun findPluginIdForProvider(baseUrl: String, modelName: String): String? {
+        val matchingPlugins = pluginConfigs.values.filter { it.providerInfo?.baseUrl == baseUrl }
+        if (matchingPlugins.isEmpty()) return null
+
+        // 优先精确匹配：如果有插件的 id 就是用户选择的模型名
+        val exactMatch = matchingPlugins.find { it.providerInfo?.id == modelName }
+        if (exactMatch != null) return exactMatch.providerInfo?.id
+
+        // 否则返回该提供商组中第一个插件的 id（作为通用网关）
+        return matchingPlugins.first().providerInfo?.id
+    }
+
+    /**
+     * 从 base_url 域名推导提供商展示名称。
+     * 域名映射最可靠，不依赖 display_name 中括号内容的一致性。
+     */
+    private fun deriveProviderName(baseUrl: String, fallbackPlugin: ProtocolPluginJson): String {
+        // 域名 → 提供商名称映射（覆盖所有当前已适配提供商）
+        val domainMap = mapOf(
+            "deepseek.com" to "DeepSeek",
+            "openai.com" to "OpenAI",
+            "anthropic.com" to "Anthropic",
+            "dashscope.aliyuncs.com" to "阿里云百炼",
+            "siliconflow.cn" to "硅基流动",
+            "volces.com" to "火山引擎",
+            "bce.baidu.com" to "百度千帆",
+            "googleapis.com" to "Google"
+        )
+
+        // 优先域名匹配
+        domainMap.forEach { (domain, name) ->
+            if (baseUrl.contains(domain)) return name
+        }
+
+        // 回退：从 display_name 的括号中提取
+        val rawName = fallbackPlugin.providerInfo?.displayName ?: return baseUrl
+        return Regex("\\((.+?)\\)").find(rawName)?.groupValues?.get(1)
+            ?: rawName
+    }
 }
+

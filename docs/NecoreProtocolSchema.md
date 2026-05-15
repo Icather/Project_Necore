@@ -12,11 +12,13 @@ Basic metadata for the provider and model.
 ```json
 "provider_info": {
   "id": "deepseek-v4-pro",
-  "display_name": "DeepSeek V4 Pro",
-  "base_url": "https://api.deepseek.com",
-  "is_openai_compatible": true
+  "display_name": "DeepSeek V4 Pro (DeepSeek)",
+  "base_url": "https://api.deepseek.com/v1",
+  "is_openai_compatible": true,
+  "available_models": ["deepseek-v4-pro", "deepseek-v4-flash"]
 }
 ```
+- `available_models`: Optional list of model IDs available under this provider. Used by the App's Provider Group selector to populate the model dropdown.
 
 ### 2.2 Reasoning Capabilities (`feature_reasoning`)
 Controls the handling of Chain-of-Thought (CoT) processes.
@@ -134,12 +136,16 @@ DeepSeek relies on implicit caching and strictly forbids temperature when reason
 }
 ```
 
-### 3.2 Anthropic Claude Example (`claude-3-5-sonnet.json`)
-Claude relies on explicit caching and does not natively expose reasoning chunks.
+### 3.2 Anthropic Claude Example (`anthropic-claude-sonnet-4.6.json`)
+Claude Sonnet 4.6+ supports extended thinking via the `thinking` response field, and uses explicit ephemeral caching.
 ```json
 {
   "feature_reasoning": {
-    "supported": false
+    "supported": true,
+    "trigger_type": "extra_body",
+    "trigger_payload": {"thinking": {"type": "enabled", "budget_tokens": 10000}},
+    "response_field": "thinking",
+    "allows_temperature": false
   },
   "feature_cache": {
     "supported": true,

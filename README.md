@@ -14,7 +14,7 @@
 - **UI 框架**: **Jetpack Compose** (全面取代传统 XML 布局)。使用 Material Design 3 组件，配合 `compose-markdown` 支持极其丰富的文本排版。
 - **状态管理**: Kotlin Coroutines (协程) `kotlinx.coroutines` 配合 `StateFlow` 实现响应式编程。
 - **本地存储**: Jetpack Room Database (持久化对话与 API 配置) 与 SharedPreferences。
-- **网络请求**: OkHttp (底层通信与 SSE 流解析) 与 Gson (JSON 反序列化)。
+- **网络请求**: OkHttp + **Okio 原生 BufferedSource** (底层通信与 SSE 逐行流式解析) 与 Gson (JSON 反序列化)。
 
 ## 3. 高级特性架构
 
@@ -26,7 +26,19 @@
 2. **底层参数透传**：网络核心接口 `ApiService.getCompletion` 提供 `options: Map<String, Any>` 参数字典，允许 UI 层的设置直接穿透至底层请求负载。
 3. **UI 按需渲染**：在 `ChatScreen` 聊天界面，Compose 实时监听模型的 `supportedCapabilities`，精准且动态地渲染相应的交互控件（如“思考模式”专属开关），实现零侵入式的界面解耦。
 
-### 3.2 性能监控：实时 Token 与缓存命中率 (Token & Cache Hit Metrics)
+### 3.2 SSE 流式逐字渲染架构
+所有 API Service 均采用 **Okio 原生 `BufferedSource.readUtf8Line()`** 解析 SSE 事件流，避免 Java `BufferedReader` 的 8KB 预读缓冲导致数据积压。每个 SSE chunk 在到达时立即 `emit` 到 Kotlin Flow，ViewModel 以 50ms 节流采样率推送至 Compose UI，实现真正的逐字实时输出。
+
+### 3.3 思考链独立渲染 (Reasoning Chain)
+大模型的 `reasoning_content`（思考过程）不再以 HTML 拼接在正文中，而是作为独立字段 `ChatMessage.reasoningText` 存储和渲染。UI 层以可折叠灰色区块展示（默认展开），DB 使用 `<think>` 标签封装存储，历史加载时兼容新旧格式。
+
+### 3.4 终止生成功能 (Stop Generating)
+输入栏的发送按钮在 AI 生成过程中自动切换为红色终止按钮。点击后立即断开底层 TCP 连接（`OkHttp Call.cancel()`），已生成的部分内容保留并持久化到数据库。
+
+### 3.5 提供商分组选择器 (Provider Groups)
+API 配置对话框中，提供商下拉按 `base_url` 聚合（域名映射识别），将原来 19+ 个插件条目聚合为约 8 个提供商分组。选中提供商后，模型下拉动态展示该平台下所有可用模型预设，同时支持手动输入自定义模型名称。
+
+### 3.6 性能监控：实时 Token 与缓存命中率 (Token & Cache Hit Metrics)
 为直观量化上下文管理策略的性能收益，项目已实装并持久化了全链路 Token 监控架构：
 1. **数据库扩容持久化**：`messages` 表 (MIGRATION_5_6) 新增 `inputTokens`、`outputTokens` 和 `cacheHitTokens`，确保 Token 消耗日志伴随聊天记录永久落盘。
 2. **流式拦截解析**：在 SSE 尾流提取大模型发回的 `usage` JSON 块，精准备捉 `prompt_cache_hit_tokens` 等特有指标。
@@ -43,9 +55,9 @@
 - **`protocol_plugins/` (根目录资产)**: 存放独立提供商协议 JSON 文件，供构建系统注入。
 
 ### 4.2 核心事件流向
-1. `Application` 启动时触发 `ProtocolRegistry` 自动扫描并挂载全量动态协议。
+1. `Application` 启动时触发 `ProtocolRegistry` 自动扫描并挂载全量动态协议，按 `base_url` 聚合为提供商分组。
 2. ViewModel 根据选中的配置请求 `ChatRepository` 获取分发的 `ApiService`。
-3. 发送消息后，SSE 响应块通过 Flow 实时推送到 `ChatUiState`，Compose 动态逐字渲染 Markdown，同时异步将正文及 Token 统计落盘至 Room。
+3. 发送消息后，Okio `BufferedSource.readUtf8Line()` 逐行解析 SSE 事件，通过 Kotlin Flow 实时推送到 `ChatUiState`（50ms 节流），Compose 在流式阶段使用轻量 `Text()` 逐字渲染，流结束后切换为精准 `MarkdownText()` 格式化。思考内容独立渲染在可折叠区块中，正文及 Token 统计异步落盘至 Room。
 
 ## 5. API 提供商规范与知识库
 
@@ -91,7 +103,7 @@
 - `[x]` 百度千帆 (Baidu Qianfan / ERNIE) — `qianfan-ernie-5.1.json`　_(2026-05-09)_
 - `[x]` 硅基流动 (SiliconFlow) — `siliconflow-deepseek-v3.json`　_(2026-05-09)_
 - `[x]` 字节火山引擎 (ByteDance Volcengine / 豆包) — `volcengine-doubao-seed-2.0-lite.json`　_(2026-05-09)_
-- `[x]` DeepSeek 官方 (`api.deepseek.com`) — `deepseek-v4-pro-20260504.json`　_(2026-05-04)_
+- `[x]` DeepSeek 官方 (`api.deepseek.com`) — `deepseek-v4-pro-20260504.json`　_(2026-05-16 更新: 仅保留 `deepseek-v4-pro` / `deepseek-v4-flash`，1M 上下文，384K 输出)_
 - `[x]` Anthropic (Claude) — `anthropic-claude-sonnet-4.6.json`　_(2026-05-09)_
 - `[x]` Google (Gemini) — `google-gemini-2.5-pro.json`　_(2026-05-09)_
 - `[x]` OpenAI (GPT / o-series) — `openai-gpt-4.1.json` / `openai-o4-mini.json`　_(2026-05-09)_
@@ -100,10 +112,11 @@
 **格式**: `[提供商]-[模型名称(可选)]-[最后修改日期(yyyyMMdd)].json` (示例: `deepseek-v4-pro-20260504.json`)
 
 ### 5.2 提供商特性指导手册
-#### 5.2.1 DeepSeek (2026/5/4)
-1. **网络连接基建**：兼容 OpenAI SDK 格式。流处理超长推理时会发送空行或 `: keep-alive` 防止超时。需实现指数退避重试 (Exponential Backoff)。
-2. **上下文硬盘缓存（KV Cache）**：默认开启。缓存匹配策略极其严苛（按前缀绝对匹配）。**开发建议**：进行截断和系统 Prompt 注入时，必须保证前缀绝对稳定。
-3. **思考模式 (Thinking Mode)**：启用时需提供 `extra_body={"thinking": {"type": "enabled"}}`。**绝对禁忌**：多轮对话若未发生工具调用，严禁将历史对话中的思维链 (`reasoning_content`) 重新拼接上传，否则易引发 HTTP 400 且破坏缓存。
+#### 5.2.1 DeepSeek (2026/5/16 更新)
+1. **当前模型**：`deepseek-v4-pro`（复杂推理/编程/Agent，1.6T参数49B活跃）、`deepseek-v4-flash`（快速推理/低延迟，284B参数13B活跃）。上下文窗口 **1M token**，最大输出 **384K token**。旧名 `deepseek-chat`/`deepseek-reasoner` 将于 2026-07-24 退役。
+2. **网络连接基建**：兼容 OpenAI SDK 格式。流处理超长推理时会发送空行或 `: keep-alive` 防止超时。需实现指数退避重试 (Exponential Backoff)。
+3. **上下文硬盘缓存（KV Cache）**：默认开启。缓存匹配策略极其严苛（按前缀绝对匹配）。**开发建议**：进行截断和系统 Prompt 注入时，必须保证前缀绝对稳定。
+4. **思考模式 (Thinking Mode)**：启用时需提供 `extra_body={"thinking": {"type": "enabled"}}`。**绝对禁忌**：多轮对话若未发生工具调用，严禁将历史对话中的思维链 (`reasoning_content`) 重新拼接上传，否则易引发 HTTP 400 且破坏缓存。
 
 ## 6. 进阶路线图 (Roadmap)
 

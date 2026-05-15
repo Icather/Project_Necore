@@ -1,10 +1,10 @@
 {
   "provider_info": {
-    "id": "deepseek-v4-pro-2026",
-    "display_name": "DeepSeek V4 Pro (Reasoning)",
+    "id": "deepseek-v4-pro",
+    "display_name": "DeepSeek V4 Pro (DeepSeek)",
     "base_url": "https://api.deepseek.com/v1",
     "is_openai_compatible": true,
-    "available_models": ["deepseek-v4-pro-2026", "deepseek-chat", "deepseek-reasoner"]
+    "available_models": ["deepseek-v4-pro", "deepseek-v4-flash"]
   },
   "feature_reasoning": {
     "supported": true,
@@ -38,8 +38,8 @@
     "cache_hit_price_per_1m": 0.1
   },
   "constraints": {
-    "max_input_tokens": 128000,
-    "max_output_tokens": 8192,
+    "max_input_tokens": 1000000,
+    "max_output_tokens": 384000,
     "requests_per_minute_limit": 60,
     "context_window_safe_threshold": 0.95
   }
