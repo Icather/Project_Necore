@@ -13,11 +13,14 @@ import android.os.Environment
 import android.view.MenuItem
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -89,21 +92,28 @@ class AboutActivity : AppCompatActivity() {
         unregisterReceiver(onDownloadComplete)
     }
 
+    /**
+     * 通过 GitHub Releases API 检查最新版本。
+     * 从 tag_name 获取版本号，从 assets 获取 APK 下载链接。
+     */
     private fun checkForUpdates() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val fileContent = URL(UPDATE_URL).readText()
-                val majorVersion = fileContent.substringAfter("majorVersion = ").substringBefore("\n").trim().toInt()
-                val minorVersion = fileContent.substringAfter("minorVersion = ").substringBefore("\n").trim().toInt()
-                val patchVersion = fileContent.substringAfter("patchVersion = ").substringBefore("\n").trim().toInt()
-                val latestVersionName = "$majorVersion.$minorVersion.$patchVersion"
+                val response = URL(RELEASES_API_URL).readText()
+                val release = Gson().fromJson(response, GitHubRelease::class.java)
 
+                val latestVersion = release.tagName.removePrefix("v")
                 val packageInfo = packageManager.getPackageInfo(packageName, 0)
-                val currentVersionName = packageInfo.versionName
+                val currentVersion = packageInfo.versionName
 
                 withContext(Dispatchers.Main) {
-                    if (currentVersionName != null && isNewerVersion(latestVersionName, currentVersionName)) {
-                        downloadAndInstallUpdate()
+                    if (currentVersion != null && isNewerVersion(latestVersion, currentVersion)) {
+                        val apkAsset = release.assets.firstOrNull { it.name.endsWith(".apk") }
+                        if (apkAsset != null) {
+                            showUpdateDialog(latestVersion, release.body, apkAsset.downloadUrl)
+                        } else {
+                            Toast.makeText(this@AboutActivity, "新版本暂无可用安装包", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         Toast.makeText(this@AboutActivity, R.string.latest_version, Toast.LENGTH_SHORT).show()
                     }
@@ -117,9 +127,23 @@ class AboutActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 展示更新确认对话框，包含 Release Notes。
+     */
+    private fun showUpdateDialog(version: String, releaseNotes: String?, downloadUrl: String) {
+        AlertDialog.Builder(this)
+            .setTitle("发现新版本 v$version")
+            .setMessage(releaseNotes ?: "有新版本可用，是否立即更新？")
+            .setPositiveButton("立即更新") { _, _ ->
+                downloadAndInstallUpdate(downloadUrl)
+            }
+            .setNegativeButton("稍后", null)
+            .show()
+    }
+
     private fun isNewerVersion(latestVersion: String, currentVersion: String): Boolean {
-        val latestParts = latestVersion.split(".").map { it.toInt() }
-        val currentParts = currentVersion.split(".").map { it.toInt() }
+        val latestParts = latestVersion.split(".").map { it.toIntOrNull() ?: 0 }
+        val currentParts = currentVersion.split(".").map { it.toIntOrNull() ?: 0 }
 
         val commonLength = minOf(latestParts.size, currentParts.size)
 
@@ -135,11 +159,12 @@ class AboutActivity : AppCompatActivity() {
         return latestParts.size > currentParts.size
     }
 
+    private fun downloadAndInstallUpdate(apkUrl: String) {
+        val destination = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "necore-update.apk")
+        // 清理旧的下载文件
+        if (destination.exists()) destination.delete()
 
-    private fun downloadAndInstallUpdate() {
-        val destination = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "app-debug.apk")
-
-        val request = DownloadManager.Request(APK_URL.toUri())
+        val request = DownloadManager.Request(apkUrl.toUri())
             .setTitle(getString(R.string.updating_necore))
             .setDescription(getString(R.string.downloading_update))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -169,8 +194,23 @@ class AboutActivity : AppCompatActivity() {
         }
     }
 
+    // ===== GitHub Releases API 数据模型 =====
+
+    private data class GitHubRelease(
+        @SerializedName("tag_name") val tagName: String,
+        val name: String?,
+        val body: String?,
+        val assets: List<GitHubAsset>
+    )
+
+    private data class GitHubAsset(
+        val name: String,
+        @SerializedName("browser_download_url") val downloadUrl: String,
+        val size: Long
+    )
+
     companion object {
-        private const val UPDATE_URL = "https://gitee.com/Icather/Project_Necore/raw/main/Project_Necore/app/build.gradle.kts"
-        private const val APK_URL = "https://gitee.com/Icather/Project_Necore/raw/main/_update/app-debug.apk"
+        private const val RELEASES_API_URL = "https://api.github.com/repos/Icather/Project_Necore/releases/latest"
     }
 }
+

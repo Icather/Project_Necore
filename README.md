@@ -48,6 +48,9 @@
 2. **流式拦截解析**：在 SSE 尾流提取大模型发回的 `usage` JSON 块，精准备捉 `prompt_cache_hit_tokens` 等特有指标。
 3. **动态角标渲染**：在 AI 消息气泡底部渲染工程化格式 (K/M 单位转化) 及百分比换算的角标（例如：`📥 输入: 32.5K (命中率: 98.2%) | 📤 输出: 1.2K`），为开发者提供极致的性能调优视野。
 
+### 3.7 应用内自动更新 (In-App Auto Update via GitHub Releases API)
+通过 GitHub Releases API (`/repos/{owner}/{repo}/releases/latest`) 实现版本检测与 OTA 更新。版本号直接从 Release `tag_name` 解析，APK 从 Release Assets 动态获取下载链接。发现新版本时弹出对话框展示 Release Notes，用户确认后通过系统 `DownloadManager` 后台下载并触发安装。
+
 ## 4. 核心目录结构与工作流 (`app/src/main/java/icather/pages/dev`)
 
 ### 4.1 目录结构

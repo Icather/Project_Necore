@@ -7,7 +7,7 @@
 
 # Rules for shrinking without obfuscation for open source projects
 -keepnames class ** { *; }
--keep class-members,allowshrinking,allowoptimization class * {
+-keepclassmembers,allowshrinking,allowoptimization class * {
     <fields>;
     <methods>;
 }

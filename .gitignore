@@ -2,14 +2,17 @@
 /.agent/
 /项目大纲.md
 
-# Ignore Android build folders that shouldn't be tracked at the root level if any
+# Build artifacts (auto-update now uses GitHub Releases API)
+/_update/
+
+# Ignore Android build folders
 /Project_Necore/app/build/
 /Project_Necore/build/
-/Project_Necore/.idea/
 /Project_Necore/.gradle/
 /Project_Necore/local.properties
 /Project_Necore/hs_err_*.log
 /Project_Necore/replay_pid*.log
 
-# Ignore root level IDE configuration files
+# IDE configuration
 /.idea/
+/Project_Necore/.idea/

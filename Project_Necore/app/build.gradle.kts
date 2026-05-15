@@ -1,12 +1,19 @@
-val majorVersion = 1
-val minorVersion = 1
-val patchVersion = 5
+import java.util.Properties
+
+val majorVersion = 2
+val minorVersion = 16
+val patchVersion = 4
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+val releaseProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
 }
 
 android {
@@ -42,9 +49,19 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(releaseProps.getProperty("RELEASE_STORE_FILE", "../necore-release.jks"))
+            storePassword = releaseProps.getProperty("RELEASE_STORE_PASSWORD", "necore2026")
+            keyAlias = releaseProps.getProperty("RELEASE_KEY_ALIAS", "necore")
+            keyPassword = releaseProps.getProperty("RELEASE_KEY_PASSWORD", "necore2026")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
