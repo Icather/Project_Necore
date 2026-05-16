@@ -37,7 +37,7 @@
 
 ### 3.5 提供商/模型分离式选择器 (Split Provider/Model Selector)
 聊天界面底部输入栏采用双行布局：
-- **第一行**：功能开关（深度思考等）
+- **第一行**：功能开关（深度思考、联网搜索等）
 - **第二行**：提供商 chip + 模型 chip + 操作按钮
 
 提供商 chip 按 `base_url` 聚合，点击弹出 DropdownMenu 切换提供商（切换 API key 和服务实例）。模型 chip 展示当前提供商下所有可用模型，点击切换只改内存中的 `modelName`，无需重建 ApiService。用户只需每个提供商配一条 ApiConfig（提供 API key），即可自由切换该提供商下的所有模型。
@@ -50,6 +50,9 @@
 
 ### 3.7 应用内自动更新 (In-App Auto Update via GitHub Releases API)
 通过 GitHub Releases API (`/repos/{owner}/{repo}/releases/latest`) 实现版本检测与 OTA 更新。版本号直接从 Release `tag_name` 解析，APK 从 Release Assets 动态获取下载链接。发现新版本时弹出对话框展示 Release Notes，用户确认后通过系统 `DownloadManager` 后台下载并触发安装。
+
+### 3.8 联网搜索 (Web Search)
+沿用动态能力感知架构，通过协议插件 `feature_web_search` 字段声明式配置。支持的提供商（阿里云百炼全系、Google Gemini）在输入栏自动显示「联网搜索」开关并默认开启；不支持的提供商（DeepSeek、OpenAI 等）按钮标灰不可点击。触发参数通过 `trigger_payload` 注入请求体，零代码扩展新提供商。
 
 ## 4. 核心目录结构与工作流 (`app/src/main/java/icather/pages/dev`)
 

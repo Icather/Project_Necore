@@ -127,6 +127,22 @@ class DynamicApiService(private val config: ProtocolPluginJson) : ApiService {
         // D3: Tool Calls — 从 options 中提取工具定义
         val toolsJson = options["tools_json"] as? JsonArray
 
+        // 联网搜索参数注入 — 将 trigger_payload 合并到 extraPayload
+        val isWebSearch = options["web_search_mode"] == true
+        if (isWebSearch && config.featureWebSearch?.supported == true) {
+            val searchPayload = config.featureWebSearch.triggerPayload
+            if (searchPayload != null) {
+                if (extraPayload == null) {
+                    extraPayload = searchPayload.deepCopy()
+                } else {
+                    // 合并：将搜索参数追加到已有的 extraPayload
+                    searchPayload.entrySet().forEach { entry ->
+                        extraPayload!!.add(entry.key, entry.value)
+                    }
+                }
+            }
+        }
+
         // 模型名称：优先使用用户在 ApiConfig 中配置的 modelName，
         // 否则回退到协议插件的 provider_info.id（兼容旧配置）
         val modelName = (options["model_name"] as? String)?.takeIf { it.isNotBlank() }

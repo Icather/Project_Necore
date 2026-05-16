@@ -33,6 +33,7 @@ data class ChatUiState(
     val title: String = "",
     val activeProtocol: icather.pages.dev.api.plugin.ProtocolPluginJson? = null,
     val isThinkingModeEnabled: Boolean = false,
+    val isWebSearchEnabled: Boolean = false,  // 联网搜索开关
     val currentEmotion: EmotionState = EmotionState.Neutral,  // D4: AI 当前情绪
     val conversations: List<icather.pages.dev.db.Conversation> = emptyList(),  // H1: 侧边栏对话列表
     val drawerSearchQuery: String = "",  // H1: 侧边栏搜索关键词
@@ -75,7 +76,9 @@ class ChatViewModel(
         _uiState.value = _uiState.value.copy(
             activeApiConfig = config,
             activeProtocol = protocol,
-            isThinkingModeEnabled = false // Reset on model change
+            isThinkingModeEnabled = false, // Reset on model change
+            // 联网搜索：支持则默认开启，不支持则关闭
+            isWebSearchEnabled = protocol?.featureWebSearch?.supported == true
         )
         initApiService(config)
     }
@@ -104,7 +107,11 @@ class ChatViewModel(
         try {
             apiService = repository.createApiService(config.provider)
             val protocol = ProtocolRegistry.getConfigSafe(config.provider)
-            _uiState.value = _uiState.value.copy(activeProtocol = protocol)
+            _uiState.value = _uiState.value.copy(
+                activeProtocol = protocol,
+                // 联网搜索：首次加载时根据协议能力自动设置默认值
+                isWebSearchEnabled = protocol?.featureWebSearch?.supported == true
+            )
         } catch (e: Exception) {
             addMessageToView(ChatMessage("Error initializing API: ${e.message}", false))
         }
@@ -112,6 +119,10 @@ class ChatViewModel(
 
     fun toggleThinkingMode(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(isThinkingModeEnabled = enabled)
+    }
+
+    fun toggleWebSearch(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(isWebSearchEnabled = enabled)
     }
 
     fun addAttachments(uris: List<Uri>, isImage: Boolean) {
@@ -457,6 +468,7 @@ class ChatViewModel(
         
         val options = mutableMapOf<String, Any>(
             "thinking_mode" to _uiState.value.isThinkingModeEnabled,
+            "web_search_mode" to _uiState.value.isWebSearchEnabled,
             "model_name" to config.modelName  // 用户配置的模型名称，透传给 DynamicApiService
         )
         if (toolCallHandler != null) {

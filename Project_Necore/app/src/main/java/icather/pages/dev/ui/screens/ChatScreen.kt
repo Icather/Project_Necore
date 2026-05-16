@@ -243,6 +243,52 @@ fun ChatScreen(
                                 }
                             }
                         }
+
+                        // 联网搜索按钮 — 支持时可切换，不支持时标灰
+                        run {
+                            val webSearchSupported = uiState.activeProtocol?.featureWebSearch?.supported == true
+                            val isSearchOn = uiState.isWebSearchEnabled && webSearchSupported
+                            val disabledColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSearchOn) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f) else Color.Transparent,
+                                border = BorderStroke(
+                                    1.dp,
+                                    when {
+                                        !webSearchSupported -> disabledColor
+                                        isSearchOn -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                    }
+                                ),
+                                modifier = Modifier.height(32.dp).then(
+                                    if (webSearchSupported) Modifier.clickable { viewModel.toggleWebSearch(!isSearchOn) }
+                                    else Modifier
+                                )
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                    Icon(
+                                        Icons.Filled.Language,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = when {
+                                            !webSearchSupported -> disabledColor
+                                            isSearchOn -> MaterialTheme.colorScheme.tertiary
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        "联网搜索",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = when {
+                                            !webSearchSupported -> disabledColor
+                                            isSearchOn -> MaterialTheme.colorScheme.tertiary
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))

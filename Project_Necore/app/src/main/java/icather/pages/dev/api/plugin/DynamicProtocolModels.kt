@@ -6,6 +6,7 @@ import com.google.gson.annotations.SerializedName
 data class ProtocolPluginJson(
     @SerializedName("provider_info") val providerInfo: ProviderInfo? = null,
     @SerializedName("feature_reasoning") val featureReasoning: FeatureReasoning? = null,
+    @SerializedName("feature_web_search") val featureWebSearch: FeatureWebSearch? = null,
     @SerializedName("feature_cache") val featureCache: FeatureCache? = null,
     @SerializedName("feature_vision") val featureVision: FeatureVision? = null,
     @SerializedName("feature_tools") val featureTools: FeatureTools? = null,
@@ -31,6 +32,13 @@ data class FeatureReasoning(
     @SerializedName("disable_payload") val disablePayload: JsonObject? = null,
     @SerializedName("response_field") val responseField: String? = null,
     @SerializedName("allows_temperature") val allowsTemperature: Boolean = true
+)
+
+// 联网搜索能力声明 — 通过 trigger_payload 注入搜索参数到请求体
+data class FeatureWebSearch(
+    val supported: Boolean = false,
+    @SerializedName("trigger_payload") val triggerPayload: JsonObject? = null,
+    @SerializedName("disable_payload") val disablePayload: JsonObject? = null
 )
 
 data class FeatureCache(
