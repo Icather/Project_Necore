@@ -154,18 +154,40 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
             }
 
             val idMap = mutableMapOf<Long, Long>()
+            var importedConvCount = 0
+            var skippedConvCount = 0
+
             bundle.conversations.forEach { conversation ->
                 val oldId = conversation.id
+
+                if (!overwrite) {
+                    // 增量导入时，按 title + startTime 检测是否已存在
+                    val existing = db.conversationDao().findByTitleAndStartTime(
+                        conversation.title, conversation.startTime
+                    )
+                    if (existing != null) {
+                        // 已存在，跳过此会话（不记录 idMap，其消息也会被自动跳过）
+                        skippedConvCount++
+                        return@forEach
+                    }
+                }
+
                 val newId = db.conversationDao().insert(conversation.copy(id = 0))
                 idMap[oldId] = newId
+                importedConvCount++
             }
 
+            var importedMsgCount = 0
             bundle.messages.forEach { message ->
-                val newConversationId = idMap[message.conversationId] ?: message.conversationId
-                db.messageDao().insert(message.copy(id = 0, conversationId = newConversationId))
+                val newConversationId = idMap[message.conversationId]
+                if (newConversationId != null) {
+                    // 仅导入有对应新会话的消息（跳过的会话的消息自动忽略）
+                    db.messageDao().insert(message.copy(id = 0, conversationId = newConversationId))
+                    importedMsgCount++
+                }
             }
 
-            Result.success(Pair(bundle.conversations.size, bundle.messages.size))
+            Result.success(Pair(importedConvCount, importedMsgCount))
         } catch (e: Exception) {
             Result.failure(e)
         }

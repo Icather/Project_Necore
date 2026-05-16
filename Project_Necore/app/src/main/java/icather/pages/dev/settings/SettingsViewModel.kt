@@ -179,7 +179,12 @@ class SettingsViewModel(
             val result = repository.importChatHistoryFromUri(uri, overwrite)
             if (result.isSuccess) {
                 val (convs, msgs) = result.getOrNull()!!
-                _events.emit(SettingsEvent.ShowToast("导入成功: $convs 个会话, $msgs 条消息"))
+                val message = if (convs == 0 && !overwrite) {
+                    "所有会话已存在，无需重复导入"
+                } else {
+                    "导入成功: $convs 个会话, $msgs 条消息"
+                }
+                _events.emit(SettingsEvent.ShowToast(message))
             } else {
                 _events.emit(SettingsEvent.ShowToast("导入失败: ${result.exceptionOrNull()?.message}"))
             }

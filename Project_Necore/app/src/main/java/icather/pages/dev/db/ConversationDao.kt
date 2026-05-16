@@ -36,6 +36,10 @@ interface ConversationDao {
     @Query("UPDATE conversations SET title = :newTitle WHERE id = :conversationId")
     suspend fun rename(conversationId: Long, newTitle: String)
 
+    // 增量导入去重：按标题+创建时间查询是否已存在
+    @Query("SELECT * FROM conversations WHERE title = :title AND startTime = :startTime LIMIT 1")
+    suspend fun findByTitleAndStartTime(title: String, startTime: Long): Conversation?
+
     // E5: 搜索 — 标题匹配 + 消息内容全文搜索
     @Query("""
         SELECT DISTINCT c.* FROM conversations c 
