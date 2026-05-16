@@ -66,4 +66,12 @@ interface MessageDao {
         ORDER BY dayEpoch ASC
     """)
     suspend fun getDailyTokenStats(since: Long): List<DailyTokenStat>
+
+    // 消息版本分支 — 查询同一根消息下的所有分支消息
+    @Query("SELECT * FROM messages WHERE parentId = :rootId ORDER BY branchIndex ASC")
+    suspend fun getSiblingBranches(rootId: Long): List<Message>
+
+    // 消息版本分支 — 带分支信息的插入（返回新消息 ID）
+    @Insert
+    suspend fun insertAndGetId(message: Message): Long
 }

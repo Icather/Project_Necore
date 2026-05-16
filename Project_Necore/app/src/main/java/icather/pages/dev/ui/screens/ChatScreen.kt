@@ -481,8 +481,42 @@ fun ChatMessageItem(
                     }
                 }
             }
+
+            // 消息版本分支导航器 — < 2/3 > 样式
+            if (message.siblingCount > 1 && viewModel != null) {
+                Row(
+                    modifier = Modifier.padding(top = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val canGoLeft = message.siblingIndex > 0
+                    val canGoRight = message.siblingIndex < message.siblingCount - 1
+                    Icon(
+                        Icons.Filled.ChevronLeft,
+                        contentDescription = "上一个版本",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .then(if (canGoLeft) Modifier.clickable { viewModel.switchBranch(index, -1) } else Modifier),
+                        tint = if (canGoLeft) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                               else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                    )
+                    Text(
+                        text = "${message.siblingIndex + 1} / ${message.siblingCount}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Icon(
+                        Icons.Filled.ChevronRight,
+                        contentDescription = "下一个版本",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .then(if (canGoRight) Modifier.clickable { viewModel.switchBranch(index, 1) } else Modifier),
+                        tint = if (canGoRight) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                               else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                    )
+                }
+            }
         }
-        
         // E3: 编辑对话框
         if (showEditDialog) {
             AlertDialog(

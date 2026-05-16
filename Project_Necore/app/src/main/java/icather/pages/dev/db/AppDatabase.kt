@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class], version = 9, exportSchema = false)
+@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class], version = 10, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun conversationDao(): ConversationDao
@@ -31,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "chat_database"
-                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                  .fallbackToDestructiveMigration(true)
                  .addCallback(AppDatabaseCallback(context))
                  .build()
@@ -108,6 +108,14 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE `conversations` ADD COLUMN `isPinned` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        // 消息版本分支 — 支持编辑消息后保留历史版本
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `messages` ADD COLUMN `parentId` INTEGER DEFAULT NULL")
+                database.execSQL("ALTER TABLE `messages` ADD COLUMN `branchIndex` INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

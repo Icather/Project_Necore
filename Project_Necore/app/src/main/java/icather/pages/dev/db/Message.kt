@@ -26,5 +26,8 @@ data class Message(
     val timestamp: Long = System.currentTimeMillis(),
     val inputTokens: Int? = null,
     val outputTokens: Int? = null,
-    val cacheHitTokens: Int? = null
+    val cacheHitTokens: Int? = null,
+    // 消息版本分支：parentId 指向同一槽位的原始消息 ID，branchIndex 标记分支序号
+    val parentId: Long? = null,
+    val branchIndex: Int = 0
 )

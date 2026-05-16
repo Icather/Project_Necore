@@ -114,5 +114,35 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
     suspend fun renameConversation(conversationId: Long, newTitle: String) = withContext(Dispatchers.IO) {
         db.conversationDao().rename(conversationId, newTitle)
     }
+
+    // 消息版本分支 — 带分支信息的消息保存
+    suspend fun saveMessageWithBranch(
+        conversationId: Long,
+        text: String,
+        isUser: Boolean,
+        isHtml: Boolean = false,
+        inputTokens: Int? = null,
+        outputTokens: Int? = null,
+        cacheHitTokens: Int? = null,
+        parentId: Long? = null,
+        branchIndex: Int = 0
+    ): Long = withContext(Dispatchers.IO) {
+        db.messageDao().insertAndGetId(Message(
+            conversationId = conversationId,
+            text = text,
+            isUser = isUser,
+            isHtml = isHtml,
+            inputTokens = inputTokens,
+            outputTokens = outputTokens,
+            cacheHitTokens = cacheHitTokens,
+            parentId = parentId,
+            branchIndex = branchIndex
+        ))
+    }
+
+    // 消息版本分支 — 查询同一根消息下的所有分支
+    suspend fun getSiblingBranches(rootId: Long): List<Message> = withContext(Dispatchers.IO) {
+        db.messageDao().getSiblingBranches(rootId)
+    }
 }
 

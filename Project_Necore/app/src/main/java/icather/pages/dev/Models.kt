@@ -12,7 +12,11 @@ data class ChatMessage(
     val outputTokens: Int? = null,
     val cacheHitTokens: Int? = null,
     val messageId: Long = 0,  // E3: 关联 DB Message.id，用于编辑/删除定位
-    val reasoningText: String = ""  // H2: 独立思考链文本，与正文分开渲染
+    val reasoningText: String = "",  // H2: 独立思考链文本，与正文分开渲染
+    // 消息版本分支
+    val siblingCount: Int = 1,    // 该槽位的总分支数
+    val siblingIndex: Int = 0,    // 当前显示的分支序号 (0-based)
+    val parentId: Long? = null    // 分支根消息 ID
 )
 
 data class ChatHistoryBundle(val conversations: List<Conversation>, val messages: List<Message>)

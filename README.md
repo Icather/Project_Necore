@@ -54,6 +54,9 @@
 ### 3.8 联网搜索 (Web Search)
 沿用动态能力感知架构，通过协议插件 `feature_web_search` 字段声明式配置。支持的提供商（阿里云百炼全系、Google Gemini）在输入栏自动显示「联网搜索」开关并默认开启；不支持的提供商（DeepSeek、OpenAI 等）按钮标灰不可点击。触发参数通过 `trigger_payload` 注入请求体，零代码扩展新提供商。
 
+### 3.9 消息版本分支 (Message Branching)
+编辑用户消息后不再删除原始记录，而是创建新的消息分支。数据库通过 `parentId` + `branchIndex` 字段（MIGRATION_9_10）实现树状版本管理。用户消息气泡右下角显示 `< 1/2 >` 分支导航器，可左右切换不同版本，AI 回复同步跟随。所有分支的 Token 消耗均被完整统计到用量中。
+
 ## 4. 核心目录结构与工作流 (`app/src/main/java/icather/pages/dev`)
 
 ### 4.1 目录结构

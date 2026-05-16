@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import icather.pages.dev.ChatMessage
 import icather.pages.dev.api.ApiService
 import icather.pages.dev.db.ApiConfig
+import icather.pages.dev.db.Message
 import icather.pages.dev.repository.ChatRepository
 import icather.pages.dev.api.plugin.ProtocolRegistry
 import icather.pages.dev.memory.UserMemoryManager
@@ -226,45 +227,114 @@ class ChatViewModel(
         resetAttachments()
     }
 
+    // 消息版本分支 — 内存中追踪每个分支组的活跃分支序号
+    private val activeBranchMap = mutableMapOf<Long, Int>() // rootId → active branchIndex
+
     fun loadConversation(conversationId: Long) {
         viewModelScope.launch {
             val conversation = repository.getConversation(conversationId)
             val dbMessages = repository.getMessagesForConversation(conversationId)
-            
-            val newMessages = dbMessages.map { 
-                // H2: 解析存储的思考链标记 — 兼容新旧格式
-                val thinkRegex = Regex("<think>(.*?)</think>", RegexOption.DOT_MATCHES_ALL)
-                val fontRegex = Regex("<font color='#999999'>(.*?)</font><br>", RegexOption.DOT_MATCHES_ALL)
-                val thinkMatch = thinkRegex.find(it.text)
-                val fontMatch = fontRegex.find(it.text)
-                val reasoning = thinkMatch?.groupValues?.get(1) ?: fontMatch?.groupValues?.get(1) ?: ""
-                val cleanText = if (thinkMatch != null) {
-                    it.text.replace(thinkRegex, "")
-                } else if (fontMatch != null) {
-                    it.text.replace(fontRegex, "")
-                } else {
-                    it.text
+
+            // 构建分支组映射：rootId → 分支消息列表
+            val branchChildren = mutableMapOf<Long, MutableList<Message>>()
+            dbMessages.forEach { msg ->
+                if (msg.parentId != null) {
+                    branchChildren.getOrPut(msg.parentId) { mutableListOf() }.add(msg)
                 }
-                
-                ChatMessage(
-                    text = cleanText, 
-                    isUser = it.isUser, 
-                    isHtml = it.isHtml,
-                    inputTokens = it.inputTokens,
-                    outputTokens = it.outputTokens,
-                    cacheHitTokens = it.cacheHitTokens,
-                    messageId = it.id,
-                    reasoningText = reasoning
-                ) 
             }
-            
+            val rootIds = branchChildren.keys
+
+            // 构建显示列表：过滤非活跃分支
+            val displayMessages = mutableListOf<ChatMessage>()
+            var i = 0
+            while (i < dbMessages.size) {
+                val msg = dbMessages[i]
+
+                if (msg.id in rootIds && msg.parentId == null) {
+                    // 这是一个分支组的根消息
+                    val children = branchChildren[msg.id]!!
+                    val maxBranch = children.maxOf { it.branchIndex }
+                    val activeBranch = activeBranchMap.getOrDefault(msg.id, maxBranch)
+                    activeBranchMap[msg.id] = activeBranch
+
+                    // 用户消息分支总数 = children 中用户消息的去重 branchIndex 数 + 1(原始)
+                    val userChildren = children.filter { it.isUser }
+                    val totalBranches = userChildren.size + 1
+
+                    if (activeBranch == 0) {
+                        // 显示原始消息
+                        displayMessages.add(parseDbMessage(msg, totalBranches, 0, msg.id))
+                        // 原始的 AI 回复 = 紧跟原始用户消息且 parentId==null 的下一条
+                        if (i + 1 < dbMessages.size && !dbMessages[i + 1].isUser && dbMessages[i + 1].parentId == null) {
+                            i++
+                            displayMessages.add(parseDbMessage(dbMessages[i], 1, 0, null))
+                        }
+                    } else {
+                        // 显示活跃分支的消息（用户 + AI）
+                        val branchUser = children.find { it.isUser && it.branchIndex == activeBranch }
+                        val branchAi = children.find { !it.isUser && it.branchIndex == activeBranch }
+                        if (branchUser != null) {
+                            displayMessages.add(parseDbMessage(branchUser, totalBranches, activeBranch, msg.id))
+                        }
+                        if (branchAi != null) {
+                            displayMessages.add(parseDbMessage(branchAi, 1, 0, null))
+                        }
+                        // 跳过原始 AI 回复
+                        if (i + 1 < dbMessages.size && !dbMessages[i + 1].isUser && dbMessages[i + 1].parentId == null
+                            && dbMessages[i + 1].branchIndex == 0) {
+                            i++
+                        }
+                    }
+                } else if (msg.parentId != null) {
+                    // 分支消息 — 已在上面处理，跳过
+                    i++
+                    continue
+                } else {
+                    // 普通消息（无分支）
+                    displayMessages.add(parseDbMessage(msg))
+                }
+                i++
+            }
+
             _uiState.value = _uiState.value.copy(
                 currentConversationId = conversationId,
                 title = conversation?.title ?: "Chat",
-                messages = newMessages
+                messages = displayMessages
             )
             resetAttachments()
         }
+    }
+
+    /** 将 DB Message 解析为 UI ChatMessage，含思考链提取和分支信息 */
+    private fun parseDbMessage(
+        msg: Message,
+        siblingCount: Int = 1,
+        siblingIndex: Int = 0,
+        parentId: Long? = null
+    ): ChatMessage {
+        val thinkRegex = Regex("<think>(.*?)</think>", RegexOption.DOT_MATCHES_ALL)
+        val fontRegex = Regex("<font color='#999999'>(.*?)</font><br>", RegexOption.DOT_MATCHES_ALL)
+        val thinkMatch = thinkRegex.find(msg.text)
+        val fontMatch = fontRegex.find(msg.text)
+        val reasoning = thinkMatch?.groupValues?.get(1) ?: fontMatch?.groupValues?.get(1) ?: ""
+        val cleanText = when {
+            thinkMatch != null -> msg.text.replace(thinkRegex, "")
+            fontMatch != null -> msg.text.replace(fontRegex, "")
+            else -> msg.text
+        }
+        return ChatMessage(
+            text = cleanText,
+            isUser = msg.isUser,
+            isHtml = msg.isHtml,
+            inputTokens = msg.inputTokens,
+            outputTokens = msg.outputTokens,
+            cacheHitTokens = msg.cacheHitTokens,
+            messageId = msg.id,
+            reasoningText = reasoning,
+            siblingCount = siblingCount,
+            siblingIndex = siblingIndex,
+            parentId = parentId ?: msg.parentId
+        )
     }
 
     fun sendMessage(text: String) {
@@ -719,39 +789,209 @@ class ChatViewModel(
     }
 
     /**
-     * E3: 编辑消息并重新发送
-     * 1. 截断 UI 列表到 index 位置
-     * 2. DB 中删除该消息及之后的所有消息
-     * 3. 用新文本发送
+     * E3: 编辑消息并重新发送（分支保留版）
+     * 不删除旧消息，而是创建新分支：
+     * 1. 确定分支根 ID
+     * 2. 创建新用户消息 + AI 回复（parentId 指向根，branchIndex 递增）
+     * 3. UI 截断到编辑点，显示新分支
      */
     fun editAndResend(index: Int, newText: String) {
         val config = _uiState.value.activeApiConfig ?: return
         val conversationId = _uiState.value.currentConversationId ?: return
-        
-        viewModelScope.launch {
-            // 获取被编辑消息的 DB 信息用于定位删除点
+
+        currentGenerationJob = viewModelScope.launch {
             val targetMessage = _uiState.value.messages.getOrNull(index) ?: return@launch
-            
-            // 截断 UI 消息列表（保留 index 之前的）
+
+            // 确定分支组的根 ID
+            val rootId = targetMessage.parentId ?: targetMessage.messageId
+            if (rootId <= 0L) {
+                // 没有有效的 DB ID（不应该发生），回退到旧逻辑
+                return@launch
+            }
+
+            // 查询现有分支数
+            val existingSiblings = repository.getSiblingBranches(rootId)
+            val nextBranchIndex = (existingSiblings.maxOfOrNull { it.branchIndex } ?: 0) + 1
+            val totalBranches = existingSiblings.count { it.isUser } + 1 + 1 // 原始 + 现有分支 + 新分支
+
+            // 更新活跃分支追踪
+            activeBranchMap[rootId] = nextBranchIndex
+
+            // 截断 UI 到编辑点，添加新分支的用户消息
             val truncated = _uiState.value.messages.take(index).toMutableList()
+            val newUserChatMsg = ChatMessage(
+                text = newText, isUser = true,
+                siblingCount = totalBranches, siblingIndex = nextBranchIndex, parentId = rootId
+            )
+            truncated.add(newUserChatMsg)
             _uiState.value = _uiState.value.copy(messages = truncated)
-            
-            // DB: 删除该消息及之后的所有消息
-            if (targetMessage.messageId > 0) {
-                // 通过 messageId 获取 timestamp 来定位
-                val dbMessages = repository.getMessagesForConversation(conversationId)
-                val targetDb = dbMessages.find { it.id == targetMessage.messageId }
-                if (targetDb != null) {
-                    repository.deleteMessagesFrom(conversationId, targetDb.timestamp)
+
+            // DB: 保存新分支的用户消息
+            val savedMsgId = repository.saveMessageWithBranch(
+                conversationId = conversationId,
+                text = newText,
+                isUser = true,
+                parentId = rootId,
+                branchIndex = nextBranchIndex
+            )
+
+            // 更新 UI 中的 messageId（用于后续编辑定位）
+            val updatedMessages = _uiState.value.messages.toMutableList()
+            val lastIdx = updatedMessages.lastIndex
+            if (lastIdx >= 0) {
+                updatedMessages[lastIdx] = updatedMessages[lastIdx].copy(messageId = savedMsgId)
+                _uiState.value = _uiState.value.copy(messages = updatedMessages)
+            }
+
+            // 获取 AI 回复（带分支标记）
+            getAIResponseForBranch(conversationId, config, rootId, nextBranchIndex)
+        }
+    }
+
+    /**
+     * 消息版本分支：切换分支
+     * @param messageIndex UI 列表中用户消息的索引
+     * @param direction -1 = 上一个分支, +1 = 下一个分支
+     */
+    fun switchBranch(messageIndex: Int, direction: Int) {
+        val conversationId = _uiState.value.currentConversationId ?: return
+        val message = _uiState.value.messages.getOrNull(messageIndex) ?: return
+        if (!message.isUser || message.siblingCount <= 1) return
+
+        val rootId = message.parentId ?: return
+        val newIndex = (message.siblingIndex + direction).coerceIn(0, message.siblingCount - 1)
+        if (newIndex == message.siblingIndex) return
+
+        // 更新活跃分支追踪并重新加载
+        activeBranchMap[rootId] = newIndex
+        loadConversation(conversationId)
+    }
+
+    /** 带分支标记的 AI 回复生成 — 保存时附带 parentId 和 branchIndex */
+    private suspend fun getAIResponseForBranch(conversationId: Long, config: ApiConfig, branchParentId: Long, branchIndex: Int) {
+        _uiState.value = _uiState.value.copy(isGenerating = true)
+        val apiKey = config.apiKey
+        if (apiKey.isEmpty()) {
+            addMessageToView(ChatMessage("API Key not set.", false))
+            _uiState.value = _uiState.value.copy(isGenerating = false)
+            return
+        }
+
+        val service = apiService ?: return
+        val dbMessages = repository.getMessagesForConversation(conversationId)
+
+        // 构建历史上下文：只包含活跃分支的消息
+        val branchChildren = mutableMapOf<Long, MutableList<Message>>()
+        dbMessages.forEach { msg -> if (msg.parentId != null) branchChildren.getOrPut(msg.parentId) { mutableListOf() }.add(msg) }
+
+        val contextMessages = mutableListOf<Message>()
+        for (msg in dbMessages) {
+            if (msg.parentId != null) continue // 跳过分支消息（稍后按需选择）
+            if (msg.id in branchChildren.keys) {
+                // 这是一个分支根 — 取活跃分支
+                val activeBranch = activeBranchMap.getOrDefault(msg.id, branchChildren[msg.id]!!.maxOf { it.branchIndex })
+                if (activeBranch == 0) {
+                    contextMessages.add(msg)
+                    // 如果下一条是原始 AI 回复也加上
+                } else {
+                    val branchUser = branchChildren[msg.id]?.find { it.isUser && it.branchIndex == activeBranch }
+                    if (branchUser != null) contextMessages.add(branchUser)
+                }
+            } else {
+                contextMessages.add(msg)
+            }
+        }
+
+        // 构建 API 消息（与 getAIResponse 相同的上下文编排逻辑）
+        val historyMessages = contextMessages.map {
+            val role = if (it.isUser) "user" else "assistant"
+            val content = it.text.replace(Regex("<font color='#999999'>.*?</font><br>", RegexOption.DOT_MATCHES_ALL), "")
+            val cleanContent = content.replace(Regex("""\[emotion:\w+]"""), "").trim()
+            ApiService.ApiMessage.text(role, cleanContent)
+        }.toMutableList()
+
+        // System Prompt 注入
+        val prefs = repository.getContext().getSharedPreferences("api_prefs", android.content.Context.MODE_PRIVATE)
+        val systemPromptParts = mutableListOf<String>()
+        if (prefs.getBoolean("identity_enabled", true)) {
+            val db = icather.pages.dev.db.AppDatabase.getInstance(repository.getContext())
+            val activeIdentity = db.identityDao().getActive()
+            if (activeIdentity != null && activeIdentity.systemPrompt.isNotBlank()) {
+                systemPromptParts.add(activeIdentity.systemPrompt)
+            }
+        }
+        if (prefs.getBoolean("memory_enabled", true)) {
+            val memoryManager = icather.pages.dev.memory.UserMemoryManager(repository.getContext())
+            val memoryText = memoryManager.getFormattedForPrompt()
+            if (memoryText.isNotBlank()) {
+                systemPromptParts.add("[用户档案（长期记忆）]\n$memoryText")
+            }
+        }
+        if (systemPromptParts.isNotEmpty()) {
+            historyMessages.add(0, ApiService.ApiMessage.text("system", systemPromptParts.joinToString("\n\n")))
+        }
+
+        val aiMessageIndex = _uiState.value.messages.size
+        addMessageToView(ChatMessage("", false, isHtml = true, isStreaming = true))
+
+        val finalContent = StringBuilder()
+        val finalReasoning = StringBuilder()
+        var finalInputTokens: Int? = null
+        var finalOutputTokens: Int? = null
+        var finalCacheHitTokens: Int? = null
+        var lastUiUpdateTime = 0L
+        val uiThrottleMs = 50L
+
+        val options = mutableMapOf<String, Any>(
+            "thinking_mode" to _uiState.value.isThinkingModeEnabled,
+            "web_search_mode" to _uiState.value.isWebSearchEnabled,
+            "model_name" to config.modelName
+        )
+
+        repository.getCompletion(service, historyMessages, apiKey, options)
+            .catch { e ->
+                val errorMsg = if (e is java.io.IOException) "Network error: ${e.message}" else "Error: ${e.message}"
+                updateMessageAt(aiMessageIndex, errorMsg)
+            }
+            .collect { chunk ->
+                chunk.content?.let { finalContent.append(it) }
+                chunk.reasoning?.let { finalReasoning.append(it) }
+                if (chunk.inputTokens != null) finalInputTokens = chunk.inputTokens
+                if (chunk.outputTokens != null) finalOutputTokens = chunk.outputTokens
+                if (chunk.cacheHitTokens != null) finalCacheHitTokens = chunk.cacheHitTokens
+
+                val now = System.currentTimeMillis()
+                if (now - lastUiUpdateTime >= uiThrottleMs) {
+                    lastUiUpdateTime = now
+                    val cleanedContent = finalContent.toString().replace(Regex("""\[emotion:\w+]"""), "")
+                    updateMessageAt(aiMessageIndex, cleanedContent, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = true, reasoningText = finalReasoning.toString())
                 }
             }
-            
-            // 用新文本重新发送
-            addMessageToView(ChatMessage(newText, true))
-            repository.saveMessage(conversationId, newText, true)
-            
-            getAIResponse(conversationId, config)
+
+        // 流结束 — 最终刷新
+        val emotionResult = icather.pages.dev.soul.EmotionParser.parse(finalContent.toString())
+        updateMessageAt(aiMessageIndex, emotionResult.cleanText, finalInputTokens, finalOutputTokens, finalCacheHitTokens, isStreaming = false, reasoningText = finalReasoning.toString())
+
+        // DB 存储（带分支标记）
+        val dbMessageText = if (finalReasoning.isNotEmpty()) {
+            "<think>${finalReasoning}</think>${emotionResult.cleanText}"
+        } else {
+            emotionResult.cleanText
         }
+        repository.saveMessageWithBranch(
+            conversationId = conversationId,
+            text = dbMessageText,
+            isUser = false,
+            isHtml = true,
+            inputTokens = finalInputTokens,
+            outputTokens = finalOutputTokens,
+            cacheHitTokens = finalCacheHitTokens,
+            parentId = branchParentId,
+            branchIndex = branchIndex
+        )
+
+        _uiState.value = _uiState.value.copy(isGenerating = false)
+        currentGenerationJob = null
     }
 
     /**
@@ -764,15 +1004,15 @@ class ChatViewModel(
         val conversationId = _uiState.value.currentConversationId ?: return
         val messages = _uiState.value.messages
         if (messages.isEmpty() || messages.last().isUser) return
-        
+
         viewModelScope.launch {
             // 移除 UI 中最后一条 AI 消息
             val truncated = messages.dropLast(1)
             _uiState.value = _uiState.value.copy(messages = truncated)
-            
+
             // DB: 删除最后一条消息
             repository.deleteLastMessage(conversationId)
-            
+
             // 重新请求
             getAIResponse(conversationId, config)
         }
