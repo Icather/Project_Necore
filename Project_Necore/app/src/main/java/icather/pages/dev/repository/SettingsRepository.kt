@@ -101,10 +101,17 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
             val json = context.contentResolver.openInputStream(uri)?.use { 
                 BufferedReader(InputStreamReader(it)).readText() 
             } ?: throw Exception("Failed to read file")
-            
+            importApiConfigsFromJson(json)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 从 JSON 字符串导入 API 配置（局域网同步入口） */
+    suspend fun importApiConfigsFromJson(json: String): Result<Int> = withContext(Dispatchers.IO) {
+        try {
             val type = object : TypeToken<List<ApiConfig>>() {}.type
             val importedConfigs: List<ApiConfig> = gson.fromJson(json, type)
-            
             db.apiConfigDao().insertAll(importedConfigs.map { it.copy(id = 0) })
             Result.success(importedConfigs.size)
         } catch (e: Exception) {
@@ -144,7 +151,15 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
             val json = context.contentResolver.openInputStream(uri)?.use { 
                 BufferedReader(InputStreamReader(it)).readText() 
             } ?: throw Exception("Failed to read file")
-            
+            importChatHistoryFromJson(json, overwrite)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 从 JSON 字符串导入聊天记录（局域网同步入口） */
+    suspend fun importChatHistoryFromJson(json: String, overwrite: Boolean): Result<Pair<Int, Int>> = withContext(Dispatchers.IO) {
+        try {
             val type = object : TypeToken<ChatHistoryBundle>() {}.type
             val bundle: ChatHistoryBundle = gson.fromJson(json, type)
 
@@ -191,6 +206,14 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /** 获取同步数据统计（供 SyncManifest 使用） */
+    suspend fun getSyncDataCounts(): Triple<Int, Int, Int> = withContext(Dispatchers.IO) {
+        val convCount = db.conversationDao().getAllConversations().size
+        val msgCount = db.messageDao().getAllMessages().size
+        val apiCount = db.apiConfigDao().getAllOnce().size
+        Triple(convCount, msgCount, apiCount)
     }
 
     suspend fun calculateSha256Hash(input: String): String = withContext(Dispatchers.Default) {

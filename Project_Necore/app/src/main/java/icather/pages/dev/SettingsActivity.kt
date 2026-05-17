@@ -83,6 +83,7 @@ class SettingsActivity : AppCompatActivity() {
                     onNavigateToIdentity = { startActivity(Intent(this@SettingsActivity, IdentityActivity::class.java)) },
                     onNavigateToUsage = { startActivity(Intent(this@SettingsActivity, UsageActivity::class.java)) },
                     onNavigateToTemplates = { startActivity(Intent(this@SettingsActivity, PromptTemplateActivity::class.java)) },
+                    onNavigateToSync = { startActivity(Intent(this@SettingsActivity, SyncActivity::class.java)) },
                     onLanguageClick = { showLanguageSelectionDialog() },
                     onImportApiClick = { importApiLauncher.launch(arrayOf("application/json")) },
                     onExportChatClick = { showExportChatHistoryDialog() },

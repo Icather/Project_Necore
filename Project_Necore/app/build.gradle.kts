@@ -114,6 +114,9 @@ dependencies {
     // D4: WorkManager for background heartbeat
     implementation(libs.androidx.work.runtime.ktx)
 
+    // 局域网同步：轻量嵌入式 HTTP 服务器
+    implementation(libs.nanohttpd)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

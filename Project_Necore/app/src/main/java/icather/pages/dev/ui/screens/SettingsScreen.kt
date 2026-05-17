@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ fun SettingsScreen(
     onNavigateToIdentity: () -> Unit = {},
     onNavigateToUsage: () -> Unit = {},
     onNavigateToTemplates: () -> Unit = {},
+    onNavigateToSync: () -> Unit = {},
     onLanguageClick: () -> Unit,
     onImportApiClick: () -> Unit,
     onExportChatClick: () -> Unit,
@@ -200,6 +202,15 @@ fun SettingsScreen(
                         subtitle = if (uiState.isFallbackEnabled) "已开启 · 主模型失败自动切换备选" else "已关闭 · 仅使用当前模型",
                         checked = uiState.isFallbackEnabled,
                         onCheckedChange = { viewModel.setFallbackEnabled(it) }
+                    )
+                    HorizontalDivider()
+                }
+                // 局域网同步入口
+                item {
+                    SettingsItem(
+                        icon = Icons.Filled.SyncAlt,
+                        title = "局域网同步",
+                        onClick = onNavigateToSync
                     )
                     HorizontalDivider()
                 }
