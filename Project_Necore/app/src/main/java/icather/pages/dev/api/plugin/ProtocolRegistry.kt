@@ -5,6 +5,7 @@ import com.google.gson.Gson
 import icather.pages.dev.api.ApiService
 import icather.pages.dev.api.DeepSeekOcrApiService
 import icather.pages.dev.api.SiliconFlowApiService
+import java.io.File
 import java.io.InputStreamReader
 
 object ProtocolRegistry {
@@ -13,6 +14,7 @@ object ProtocolRegistry {
     private val pluginConfigs = mutableMapOf<String, ProtocolPluginJson>()
     private val gson = Gson()
     private var isInitialized = false
+    private var appContext: Context? = null
 
     init {
         // Register default protocols (legacy hardcoded entries).
@@ -22,8 +24,32 @@ object ProtocolRegistry {
 
     fun init(context: Context) {
         if (isInitialized) return
+        appContext = context.applicationContext
         isInitialized = true
+        loadAllPlugins(context)
+    }
 
+    /**
+     * 热重载：下载/删除插件后调用，重新扫描所有来源。
+     * 清空已有注册表后重新加载 assets + filesDir/plugins/。
+     */
+    fun reload() {
+        val ctx = appContext ?: return
+        protocols.clear()
+        pluginConfigs.clear()
+        // 重新注册硬编码默认协议
+        protocols["OpenAI"] = { OpenAiApiService() }
+        loadAllPlugins(ctx)
+    }
+
+    private fun loadAllPlugins(context: Context) {
+        // 第一步：加载 APK 内置 assets 中的插件
+        loadFromAssets(context)
+        // 第二步：加载 filesDir/plugins/ 中的外部下载插件（可覆盖内置同名插件）
+        loadFromExternalDir(context)
+    }
+
+    private fun loadFromAssets(context: Context) {
         try {
             val assetManager = context.assets
             val files = assetManager.list("") ?: emptyArray()
@@ -35,18 +61,7 @@ object ProtocolRegistry {
                         val reader = InputStreamReader(inputStream)
                         val config = gson.fromJson(reader, ProtocolPluginJson::class.java)
                         reader.close()
-                        
-                        if (config?.providerInfo?.id?.isNotBlank() == true) {
-                            // 第零法则路由：根据协议兼容性分发到对应的 ApiService 实现
-                            // 编译期保证 OpenAI 兼容协议和 Anthropic 协议走不同的类型通道
-                            if (config.providerInfo.isOpenAiCompatible) {
-                                protocols[config.providerInfo.id] = { DynamicApiService(config) }
-                            } else {
-                                // 非 OpenAI 兼容协议，目前仅支持 Anthropic
-                                protocols[config.providerInfo.id] = { AnthropicDynamicApiService(config) }
-                            }
-                            pluginConfigs[config.providerInfo.id] = config
-                        }
+                        registerPlugin(config)
                     } catch (e: Exception) {
                         e.printStackTrace()
                         // Safe isolation: skip this malformed JSON and continue
@@ -55,6 +70,41 @@ object ProtocolRegistry {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun loadFromExternalDir(context: Context) {
+        try {
+            val pluginsDir = File(context.filesDir, "plugins")
+            if (!pluginsDir.exists()) return
+
+            val files = pluginsDir.listFiles() ?: return
+            for (file in files) {
+                if (file.extension == "json") {
+                    try {
+                        val config = gson.fromJson(file.readText(Charsets.UTF_8), ProtocolPluginJson::class.java)
+                        registerPlugin(config)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun registerPlugin(config: ProtocolPluginJson?) {
+        if (config?.providerInfo?.id?.isNotBlank() == true) {
+            // 第零法则路由：根据协议兼容性分发到对应的 ApiService 实现
+            // 编译期保证 OpenAI 兼容协议和 Anthropic 协议走不同的类型通道
+            if (config.providerInfo.isOpenAiCompatible) {
+                protocols[config.providerInfo.id] = { DynamicApiService(config) }
+            } else {
+                // 非 OpenAI 兼容协议，目前仅支持 Anthropic
+                protocols[config.providerInfo.id] = { AnthropicDynamicApiService(config) }
+            }
+            pluginConfigs[config.providerInfo.id] = config
         }
     }
 

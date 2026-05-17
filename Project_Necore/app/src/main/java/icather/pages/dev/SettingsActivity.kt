@@ -77,7 +77,7 @@ class SettingsActivity : AppCompatActivity() {
                     onNavigateBack = { finish() },
                     onNavigateToApiConfig = { startActivity(Intent(this@SettingsActivity, ApiConfigActivity::class.java)) },
                     onNavigateToPlugins = {
-                        android.widget.Toast.makeText(this@SettingsActivity, "Plugin Manager coming soon!", android.widget.Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@SettingsActivity, PluginManagerActivity::class.java))
                     },
                     onNavigateToAbout = { startActivity(Intent(this@SettingsActivity, AboutActivity::class.java)) },
                     onNavigateToIdentity = { startActivity(Intent(this@SettingsActivity, IdentityActivity::class.java)) },
