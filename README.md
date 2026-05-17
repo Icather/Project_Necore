@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 Necore
+# <img src="docs/assets/app_icon.webp" width="48" height="48" align="absmiddle" /> Necore
 
 **跨生态 AI 聊天客户端 — 一个 App 接入所有大模型**
 
