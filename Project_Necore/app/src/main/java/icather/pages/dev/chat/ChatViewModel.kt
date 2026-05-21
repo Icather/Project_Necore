@@ -52,6 +52,10 @@ class ChatViewModel(
     private var currentGenerationJob: kotlinx.coroutines.Job? = null  // H3: 当前生成任务引用
 
     init {
+        // 首次安装：自动生成欢迎示例对话
+        viewModelScope.launch {
+            repository.ensureSampleConversation()
+        }
         viewModelScope.launch {
             repository.getAllApiConfigs().collect { configs ->
                 if (configs.isNotEmpty()) {

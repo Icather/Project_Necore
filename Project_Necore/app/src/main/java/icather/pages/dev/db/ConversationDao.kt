@@ -22,6 +22,9 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE id = :conversationId")
     suspend fun getConversation(conversationId: Long): Conversation?
 
+    @Query("SELECT COUNT(*) FROM conversations")
+    suspend fun getConversationCount(): Int
+
     @Query("DELETE FROM conversations")
     suspend fun clearAll()
 

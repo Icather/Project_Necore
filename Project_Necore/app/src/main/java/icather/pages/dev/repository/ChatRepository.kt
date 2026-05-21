@@ -153,5 +153,33 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
     suspend fun getSiblingBranches(rootId: Long): List<Message> = withContext(Dispatchers.IO) {
         db.messageDao().getSiblingBranches(rootId)
     }
-}
 
+    /**
+     * 首次安装时自动生成示例对话。
+     * 仅在对话列表为空时触发，展示 Necore 的功能介绍。
+     */
+    suspend fun ensureSampleConversation() = withContext(Dispatchers.IO) {
+        if (db.conversationDao().getConversationCount() > 0) return@withContext
+
+        val convoId = db.conversationDao().insert(Conversation(
+            title = "欢迎使用 Necore",
+            startTime = System.currentTimeMillis() - 60000
+        ))
+
+        db.messageDao().insert(Message(
+            conversationId = convoId,
+            text = "你好！我是 Necore —— 你的智能 AI 对话助手。\n\n" +
+                   "✨ 我可以做什么？\n" +
+                   "• 让你的 AI 拥有「人设」和「长期记忆」\n" +
+                   "• 支持多模态：图片识别、文件分析\n" +
+                   "• 强大的协议引擎：兼容 OpenAI / DeepSeek / 通义千问 等主流 LLM\n" +
+                   "• 思考链 + 联网搜索 + 自动模型降级\n" +
+                   "• 消息版本分支：编辑已发送的内容，探索不同回复方向\n\n" +
+                   "从「设置」配置你的 API Key，就可以开始对话了 🚀",
+            isUser = false,
+            isHtml = false,
+            timestamp = System.currentTimeMillis() - 30000,
+            modelName = null
+        ))
+    }
+}
