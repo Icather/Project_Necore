@@ -37,7 +37,8 @@ class UsageActivity : AppCompatActivity() {
                             totalCacheHitTokens = dao.getTotalCacheHitTokens(),
                             totalConversations = dao.getTotalConversationCount(),
                             totalAiMessages = dao.getTotalAiMessageCount(),
-                            dailyStats = dao.getDailyTokenStats(sevenDaysAgo)
+                            dailyStats = dao.getDailyTokenStats(sevenDaysAgo),
+                            modelStats = dao.getModelUsageStats()
                         )
                     }
                 }

@@ -74,4 +74,19 @@ interface MessageDao {
     // 消息版本分支 — 带分支信息的插入（返回新消息 ID）
     @Insert
     suspend fun insertAndGetId(message: Message): Long
+
+    // F5: 按模型统计用量（缓存命中率等）
+    @Query("""
+        SELECT 
+            modelName,
+            COALESCE(SUM(inputTokens), 0) as totalInput,
+            COALESCE(SUM(outputTokens), 0) as totalOutput,
+            COALESCE(SUM(cacheHitTokens), 0) as totalCacheHit,
+            COUNT(*) as messageCount
+        FROM messages 
+        WHERE isUser = 0 AND modelName IS NOT NULL AND modelName != ''
+        GROUP BY modelName 
+        ORDER BY totalInput DESC
+    """)
+    suspend fun getModelUsageStats(): List<ModelUsageStat>
 }

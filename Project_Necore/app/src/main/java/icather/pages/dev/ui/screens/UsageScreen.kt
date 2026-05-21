@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import icather.pages.dev.db.DailyTokenStat
+import icather.pages.dev.db.ModelUsageStat
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,7 +35,8 @@ data class UsageStats(
     val totalCacheHitTokens: Long = 0,
     val totalConversations: Int = 0,
     val totalAiMessages: Int = 0,
-    val dailyStats: List<DailyTokenStat> = emptyList()
+    val dailyStats: List<DailyTokenStat> = emptyList(),
+    val modelStats: List<ModelUsageStat> = emptyList()
 )
 
 /**
@@ -206,6 +208,40 @@ fun UsageScreen(
                         MetricRow("平均每次回复字数", formatLargeNumber(avgOutputPerMsg))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         MetricRow("缓存命中率", String.format("%.1f%%", cacheRate))
+                    }
+                }
+            }
+
+            // F5: 按模型用量明细
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "按模型统计",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            if (stats.modelStats.isEmpty()) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Text(
+                            "暂无数据（请给 AI 消息设置模型名称）",
+                            modifier = Modifier.padding(32.dp),
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            } else {
+                stats.modelStats.forEach { model ->
+                    item {
+                        ModelUsageCard(model)
                     }
                 }
             }
@@ -383,5 +419,101 @@ private fun formatLargeNumber(value: Long): String {
         value >= 1_000_000 -> String.format("%.1fM", value / 1_000_000.0)
         value >= 1_000 -> String.format("%.1fK", value / 1_000.0)
         else -> value.toString()
+    }
+}
+
+/** F5: 单个模型的用量卡片 */
+@Composable
+private fun ModelUsageCard(stat: ModelUsageStat) {
+    val modelName = stat.modelName ?: "未知模型"
+    val totalModelTokens = stat.totalInput + stat.totalOutput
+    val cacheRate = if (stat.totalInput > 0) (stat.totalCacheHit * 100.0 / stat.totalInput) else 0.0
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // 模型名标题行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = modelName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "${stat.messageCount} 条回复",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 两行指标
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = formatLargeNumber(totalModelTokens),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "总Token",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = formatLargeNumber(stat.totalInput),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50)
+                    )
+                    Text(
+                        text = "输入",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = formatLargeNumber(stat.totalOutput),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFF9800)
+                    )
+                    Text(
+                        text = "输出",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = String.format("%.1f%%", cacheRate),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF9C27B0)
+                    )
+                    Text(
+                        text = "缓存命中率",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }

@@ -644,8 +644,9 @@ fun ChatMessageItem(
                         if (cost > 0) costStr = String.format(" · ￥%.4f", cost)
                     }
                     
+                    val modelStr = if (message.modelName != null) " · ${message.modelName}" else ""
                     Text(
-                        text = "$inputStr$separator$outputStr$costStr",
+                        text = "$inputStr$separator$outputStr$costStr$modelStr",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
@@ -904,6 +905,15 @@ private fun ConversationDrawerItem(
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                if (conversation.lastModelName != null) {
+                    Text(
+                        text = conversation.lastModelName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
                 IconButton(onClick = { showMenu = true }, modifier = Modifier.size(28.dp)) {
                     Icon(Icons.Filled.MoreHoriz, contentDescription = "More", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
                 }

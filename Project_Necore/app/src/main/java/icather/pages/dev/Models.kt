@@ -13,6 +13,7 @@ data class ChatMessage(
     val cacheHitTokens: Int? = null,
     val messageId: Long = 0,  // E3: 关联 DB Message.id，用于编辑/删除定位
     val reasoningText: String = "",  // H2: 独立思考链文本，与正文分开渲染
+    val modelName: String? = null,  // 该条回复使用的模型名称
     // 消息版本分支
     val siblingCount: Int = 1,    // 该槽位的总分支数
     val siblingIndex: Int = 0,    // 当前显示的分支序号 (0-based)

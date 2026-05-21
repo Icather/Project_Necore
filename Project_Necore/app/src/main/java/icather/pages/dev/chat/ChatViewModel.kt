@@ -331,6 +331,7 @@ class ChatViewModel(
             cacheHitTokens = msg.cacheHitTokens,
             messageId = msg.id,
             reasoningText = reasoning,
+            modelName = msg.modelName,
             siblingCount = siblingCount,
             siblingIndex = siblingIndex,
             parentId = parentId ?: msg.parentId
@@ -389,8 +390,8 @@ class ChatViewModel(
         
         try {
             val ocrText = repository.performOcr(service, imageUri, apiKey)
-            addMessageToView(ChatMessage(ocrText, false))
-            repository.saveMessage(conversationId, ocrText, false)
+            addMessageToView(ChatMessage(ocrText, false, modelName = config.modelName))
+            repository.saveMessage(conversationId, ocrText, false, modelName = config.modelName)
         } catch (e: Exception) {
             val msg = if (e is IOException) "Network error: ${e.message}" else "Error: ${e.message}"
             addMessageToView(ChatMessage(msg, false))
@@ -423,7 +424,8 @@ class ChatViewModel(
                         stoppedText
                     }
                     repository.saveMessage(conversationId, dbText, false, isHtml = true,
-                        inputTokens = msg.inputTokens, outputTokens = msg.outputTokens, cacheHitTokens = msg.cacheHitTokens)
+                        inputTokens = msg.inputTokens, outputTokens = msg.outputTokens, cacheHitTokens = msg.cacheHitTokens,
+                        modelName = msg.modelName)
                 }
             }
         } else {
@@ -683,8 +685,12 @@ class ChatViewModel(
                 isHtml = true,
                 inputTokens = finalInputTokens,
                 outputTokens = finalOutputTokens,
-                cacheHitTokens = finalCacheHitTokens
+                cacheHitTokens = finalCacheHitTokens,
+                modelName = config.modelName
             )
+
+            // 更新对话最后使用的模型
+            repository.setConversationLastModel(conversationId, config.modelName)
         }
 
         // ===== G2: 模型 Fallback 链执行 =====
@@ -750,8 +756,11 @@ class ChatViewModel(
                             isHtml = true,
                             inputTokens = fbInputTokens,
                             outputTokens = fbOutputTokens,
-                            cacheHitTokens = fbCacheHitTokens
+                            cacheHitTokens = fbCacheHitTokens,
+                            modelName = fallbackConfig.modelName
                         )
+                        // 更新对话最后使用的模型
+                        repository.setConversationLastModel(conversationId, fallbackConfig.modelName)
                         return // 成功降级，退出
                     }
                 } catch (_: Exception) {
@@ -832,7 +841,8 @@ class ChatViewModel(
                 text = newText,
                 isUser = true,
                 parentId = rootId,
-                branchIndex = nextBranchIndex
+                branchIndex = nextBranchIndex,
+                modelName = config.modelName
             )
 
             // 更新 UI 中的 messageId（用于后续编辑定位）
@@ -986,9 +996,13 @@ class ChatViewModel(
             inputTokens = finalInputTokens,
             outputTokens = finalOutputTokens,
             cacheHitTokens = finalCacheHitTokens,
+            modelName = config.modelName,
             parentId = branchParentId,
             branchIndex = branchIndex
         )
+
+        // 更新对话最后使用的模型
+        repository.setConversationLastModel(conversationId, config.modelName)
 
         _uiState.value = _uiState.value.copy(isGenerating = false)
         currentGenerationJob = null

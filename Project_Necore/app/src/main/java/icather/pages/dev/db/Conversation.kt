@@ -10,5 +10,6 @@ data class Conversation(
     val startTime: Long = System.currentTimeMillis(),
     // Let's add a title to easily identify conversations
     var title: String = "New Conversation",
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val lastModelName: String? = null  // 最后一次使用的模型名称
 )

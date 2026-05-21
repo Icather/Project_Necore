@@ -58,7 +58,8 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
         isHtml: Boolean = false,
         inputTokens: Int? = null,
         outputTokens: Int? = null,
-        cacheHitTokens: Int? = null
+        cacheHitTokens: Int? = null,
+        modelName: String? = null
     ): Long = withContext(Dispatchers.IO) {
         db.messageDao().insert(Message(
             conversationId = conversationId, 
@@ -67,7 +68,8 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
             isHtml = isHtml,
             inputTokens = inputTokens,
             outputTokens = outputTokens,
-            cacheHitTokens = cacheHitTokens
+            cacheHitTokens = cacheHitTokens,
+            modelName = modelName
         ))
     }
 
@@ -124,6 +126,7 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
         inputTokens: Int? = null,
         outputTokens: Int? = null,
         cacheHitTokens: Int? = null,
+        modelName: String? = null,
         parentId: Long? = null,
         branchIndex: Int = 0
     ): Long = withContext(Dispatchers.IO) {
@@ -135,9 +138,15 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
             inputTokens = inputTokens,
             outputTokens = outputTokens,
             cacheHitTokens = cacheHitTokens,
+            modelName = modelName,
             parentId = parentId,
             branchIndex = branchIndex
         ))
+    }
+
+    // 更新对话最后使用的模型
+    suspend fun setConversationLastModel(conversationId: Long, modelName: String) = withContext(Dispatchers.IO) {
+        db.conversationDao().setLastModelName(conversationId, modelName)
     }
 
     // 消息版本分支 — 查询同一根消息下的所有分支

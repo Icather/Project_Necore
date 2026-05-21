@@ -40,6 +40,10 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE title = :title AND startTime = :startTime LIMIT 1")
     suspend fun findByTitleAndStartTime(title: String, startTime: Long): Conversation?
 
+    // 更新最后使用的模型名称
+    @Query("UPDATE conversations SET lastModelName = :modelName WHERE id = :conversationId")
+    suspend fun setLastModelName(conversationId: Long, modelName: String)
+
     // E5: 搜索 — 标题匹配 + 消息内容全文搜索
     @Query("""
         SELECT DISTINCT c.* FROM conversations c 

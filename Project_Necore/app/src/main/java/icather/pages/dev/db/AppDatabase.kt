@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class], version = 10, exportSchema = false)
+@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class], version = 11, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun conversationDao(): ConversationDao
@@ -31,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "chat_database"
-                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                  .fallbackToDestructiveMigration(true)
                  .addCallback(AppDatabaseCallback(context))
                  .build()
@@ -116,6 +116,14 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE `messages` ADD COLUMN `parentId` INTEGER DEFAULT NULL")
                 database.execSQL("ALTER TABLE `messages` ADD COLUMN `branchIndex` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        // 模型追踪 — 对话最后使用的模型 + 每条消息的模型名称
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `conversations` ADD COLUMN `lastModelName` TEXT DEFAULT NULL")
+                database.execSQL("ALTER TABLE `messages` ADD COLUMN `modelName` TEXT DEFAULT NULL")
             }
         }
     }
