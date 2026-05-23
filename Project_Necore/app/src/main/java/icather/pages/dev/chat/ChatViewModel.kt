@@ -15,6 +15,7 @@ import icather.pages.dev.memory.UserMemoryManager
 import icather.pages.dev.soul.EmotionParser
 import icather.pages.dev.soul.EmotionState
 import icather.pages.dev.util.ImageCompressor
+import icather.pages.dev.branch.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +39,9 @@ data class ChatUiState(
     val currentEmotion: EmotionState = EmotionState.Neutral,  // D4: AI 当前情绪
     val conversations: List<icather.pages.dev.db.Conversation> = emptyList(),  // H1: 侧边栏对话列表
     val drawerSearchQuery: String = "",  // H1: 侧边栏搜索关键词
-    val isGenerating: Boolean = false  // H3: 是否正在生成回复
+    val isGenerating: Boolean = false, // H3: 是否正在生成回复
+    val branchTree: TopicBranchTree? = null, // 分支历史树状态
+    val isBranchPanelOpen: Boolean = false   // 分支历史面板显式弹起状态
 )
 
 class ChatViewModel(
@@ -1034,6 +1037,180 @@ class ChatViewModel(
             // 重新请求
             getAIResponse(conversationId, config)
         }
+    }
+
+    /**
+     * 1. 显式控制分支面板的打开与关闭
+     */
+    fun toggleBranchPanel(isOpen: Boolean) {
+        _uiState.value = _uiState.value.copy(isBranchPanelOpen = isOpen)
+        if (isOpen) {
+            val convoId = _uiState.value.currentConversationId ?: return
+            viewModelScope.launch {
+                // 打开时静默在后台更新一次，确保展现的状态完全实时
+                rebuildBranchTree(convoId)
+            }
+        }
+    }
+
+    /**
+     * 2. 侧边栏（底部面板） -> 主对话区：选中分支节点并触发滚动定位的正向联动
+     */
+    fun selectBranchNode(rootId: Long, pageIndex: Int, onComplete: (targetIndex: Int) -> Unit) {
+        val convoId = _uiState.value.currentConversationId ?: return
+        activeBranchMap[rootId] = pageIndex
+
+        viewModelScope.launch {
+            // 重新加载该 Conversation，重构主界面显示的消息列表
+            loadConversation(convoId)
+            
+            // 后台更新分支状态树
+            rebuildBranchTree(convoId)
+
+            // 计算该 rootId 对应的用户消息或关联消息在当前 messages 列表中的索引
+            val displayMessages = _uiState.value.messages
+            val targetIdx = displayMessages.indexOfFirst { it.messageId == rootId || it.parentId == rootId }
+            if (targetIdx >= 0) {
+                onComplete(targetIdx)
+            }
+        }
+    }
+
+    /**
+     * 3. 主对话区 -> 侧边栏（底部面板）：当用户在手机端滚动视口，反向静默更新聚焦的激活轮次
+     */
+    fun updateViewportActiveRound(messageId: Long) {
+        val currentTree = _uiState.value.branchTree ?: return
+        val rootId = findRootIdForMessage(messageId) ?: return
+
+        if (currentTree.activeNodeId != rootId) {
+            val updatedNodes = currentTree.nodes.map { node ->
+                node.copy(isActive = node.rootId == rootId)
+            }
+            _uiState.value = _uiState.value.copy(
+                branchTree = currentTree.copy(
+                    nodes = updatedNodes,
+                    activeNodeId = rootId
+                )
+            )
+        }
+    }
+
+    private fun findRootIdForMessage(messageId: Long): Long? {
+        val currentTree = _uiState.value.branchTree ?: return null
+        return currentTree.nodes.find { node ->
+            node.rootId == messageId || node.pages.any { it.userMessageId == messageId || it.aiMessageId == messageId }
+        }?.rootId
+    }
+
+    /**
+     * 4. 静默重新构建并刷新 TopicBranchTree 状态的方法
+     */
+    private suspend fun rebuildBranchTree(conversationId: Long) {
+        val dbMessages = repository.getMessagesForConversation(conversationId)
+        val tree = buildTopicBranchTree(conversationId, dbMessages, activeBranchMap)
+        
+        // 维持原有的激活节点 rootId
+        val lastActiveId = _uiState.value.branchTree?.activeNodeId
+        val finalizedNodes = if (lastActiveId != null) {
+            tree.nodes.map { it.copy(isActive = it.rootId == lastActiveId) }
+        } else {
+            tree.nodes
+        }
+        
+        _uiState.value = _uiState.value.copy(
+            branchTree = tree.copy(
+                nodes = finalizedNodes,
+                activeNodeId = lastActiveId
+            )
+        )
+    }
+
+    /**
+     * 5. 纯数据分支节点归集算法：构建结构化的 TopicBranchTree
+     */
+    private fun buildTopicBranchTree(
+        conversationId: Long,
+        dbMessages: List<Message>,
+        activeBranchMap: Map<Long, Int>
+    ): TopicBranchTree {
+        // 构建分支映射：rootId -> 该根消息下的所有兄弟消息（包括用户和 AI 消息）
+        val branchChildren = mutableMapOf<Long, MutableList<Message>>()
+        dbMessages.forEach { msg ->
+            if (msg.parentId != null) {
+                branchChildren.getOrPut(msg.parentId) { mutableListOf() }.add(msg)
+            }
+        }
+
+        val nodes = mutableListOf<BranchNode>()
+        var i = 0
+        while (i < dbMessages.size) {
+            val msg = dbMessages[i]
+
+            // 识别每轮对话的起点（第一条用户提问，parentId == null 且 isUser == true）
+            if (msg.isUser && msg.parentId == null) {
+                val rootId = msg.id
+                val children = branchChildren[rootId] ?: mutableListOf()
+
+                // 归集这一轮次下的所有分页（分支版本）
+                val pages = mutableListOf<BranchPage>()
+
+                // A. 原始分支 (branchIndex == 0)
+                val originalAiMsg = if (i + 1 < dbMessages.size && !dbMessages[i + 1].isUser && dbMessages[i + 1].parentId == null) {
+                    dbMessages[i + 1]
+                } else null
+
+                pages.add(
+                    BranchPage(
+                        pageIndex = 0,
+                        userMessageId = msg.id,
+                        userText = msg.text,
+                        aiMessageId = originalAiMsg?.id,
+                        aiText = originalAiMsg?.text ?: "",
+                        isStreaming = false
+                    )
+                )
+
+                // B. 后续编辑生成的分支 (branchIndex > 0)
+                val userBranches = children.filter { it.isUser }.sortedBy { it.branchIndex }
+                userBranches.forEach { userMsg ->
+                    val bIndex = userMsg.branchIndex
+                    val aiMsg = children.find { !it.isUser && it.branchIndex == bIndex }
+                    pages.add(
+                        BranchPage(
+                            pageIndex = bIndex,
+                            userMessageId = userMsg.id,
+                            userText = userMsg.text,
+                            aiMessageId = aiMsg?.id,
+                            aiText = aiMsg?.text ?: "",
+                            isStreaming = false
+                        )
+                    )
+                }
+
+                // 确定当前节点在 UI 或内存中激活的分页序号
+                val maxBranch = pages.maxOf { it.pageIndex }
+                val activeBranchIndex = activeBranchMap.getOrDefault(rootId, maxBranch)
+
+                nodes.add(
+                    BranchNode(
+                        rootId = rootId,
+                        originalText = msg.text,
+                        pages = pages,
+                        currentPageIndex = activeBranchIndex,
+                        totalPageCount = pages.size,
+                        isActive = false
+                    )
+                )
+            }
+            i++
+        }
+
+        return TopicBranchTree(
+            conversationId = conversationId,
+            nodes = nodes,
+            activeNodeId = _uiState.value.branchTree?.activeNodeId
+        )
     }
 
     class Factory(private val repository: ChatRepository) : ViewModelProvider.Factory {

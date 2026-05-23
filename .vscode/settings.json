@@ -52,6 +52,12 @@
             "isRegExp": true,
             "cmd": "copy /Y \"${file}\" \"${workspaceRoot}\\.agents\\rules\\antigravity_rules.md\"",
             "event": "onFileChange"
+        },
+        {
+            "match": "\\.clinerules\\\\workflows\\\\protocol-review\\.md",
+            "isRegExp": true,
+            "cmd": "copy /Y \"${file}\" \"${workspaceRoot}\\.agents\\workflows\\protocol-review.md\"",
+            "event": "onFileChange"
         }
     ]
 }

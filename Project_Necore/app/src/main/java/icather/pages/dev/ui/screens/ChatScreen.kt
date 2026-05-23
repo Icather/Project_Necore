@@ -59,6 +59,18 @@ fun ChatScreen(
         }
     }
 
+    // 监听主对话区滚动焦点变化（反向静默联动）
+    val firstVisibleItemIndex by remember {
+        derivedStateOf { listState.firstVisibleItemIndex }
+    }
+    LaunchedEffect(firstVisibleItemIndex) {
+        val messages = uiState.messages
+        if (firstVisibleItemIndex in messages.indices) {
+            val msg = messages[firstVisibleItemIndex]
+            viewModel.updateViewportActiveRound(msg.messageId)
+        }
+    }
+
     // Scroll to bottom when messages change
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
@@ -119,6 +131,9 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.toggleBranchPanel(true) }) {
+                        Icon(Icons.Filled.AccountTree, contentDescription = "打开分支")
+                    }
                     IconButton(onClick = { viewModel.startNewChat() }) {
                         Icon(Icons.Filled.AddCircleOutline, contentDescription = "New Chat")
                     }
@@ -424,6 +439,14 @@ fun ChatScreen(
                 }
             }
         }
+
+        // 手机端弹性分支历史面板 (100%隐藏无缝隙，点击“打开分支”后平滑滑出)
+        BranchHistoryBottomSheet(
+            uiState = uiState,
+            viewModel = viewModel,
+            listState = listState,
+            coroutineScope = coroutineScope
+        )
     } // Scaffold
     } // ModalNavigationDrawer
 }
@@ -983,4 +1006,182 @@ private fun groupConversationsByTime(conversations: List<icather.pages.dev.db.Co
     if (older.isNotEmpty()) result.add("更早" to older)
 
     return result
+}
+
+/**
+ * 手机端专属：底部弹性分支面板（100%隐藏无缝隙，点击“打开分支”后平滑滑出，具有高度精致的视觉呈现）
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BranchHistoryBottomSheet(
+    uiState: icather.pages.dev.chat.ChatUiState,
+    viewModel: ChatViewModel,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope
+) {
+    if (uiState.isBranchPanelOpen) {
+        val branchTree = uiState.branchTree
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.toggleBranchPanel(false) },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                // 顶部标题控制栏
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "分支对话历史",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = { viewModel.toggleBranchPanel(false) }) {
+                        Icon(Icons.Filled.Close, contentDescription = "收起")
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                if (branchTree == null || branchTree.nodes.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "暂无分支历史记录",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        itemsIndexed(branchTree.nodes) { nodeIndex, node ->
+                            BranchNodeItem(
+                                node = node,
+                                onNodeClick = { pageIdx ->
+                                    viewModel.selectBranchNode(node.rootId, pageIdx) { targetIndex ->
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(targetIndex)
+                                        }
+                                    }
+                                }
+                            )
+                            if (nodeIndex < branchTree.nodes.lastIndex) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 每一个分支轮次节点的卡片式展示项
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BranchNodeItem(
+    node: icather.pages.dev.branch.BranchNode,
+    onNodeClick: (pageIndex: Int) -> Unit
+) {
+    val backgroundColor = if (node.isActive) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+    }
+    
+    val borderColor = if (node.isActive) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+    } else {
+        Color.Transparent
+    }
+
+    Surface(
+        onClick = { onNodeClick(node.currentPageIndex) },
+        shape = RoundedCornerShape(12.dp),
+        color = backgroundColor,
+        border = if (borderColor != Color.Transparent) BorderStroke(1.dp, borderColor) else null,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 左侧时间轴圆点装饰
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (node.isActive) MaterialTheme.colorScheme.primary 
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    )
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            // 右侧文本与版本标识
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = getTruncatedDisplayText(node.originalText, maxLength = 40),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (node.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "版本 ${node.currentPageIndex + 1} / ${node.totalPageCount}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    
+                    if (node.totalPageCount > 1) {
+                        Text(
+                            text = "有 ${node.totalPageCount} 个分支",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 网页分支文本的手机端自适应截断控制函数
+ */
+fun getTruncatedDisplayText(text: String, maxLength: Int = 40): String {
+    val cleanText = text.replace("\n", " ").trim()
+    return if (cleanText.length > maxLength) {
+        cleanText.take(maxLength) + "..."
+    } else {
+        cleanText
+    }
 }
