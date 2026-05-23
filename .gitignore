@@ -1,5 +1,7 @@
 # Agent context and workspace generated plans
 /.agent/
+/.agents/
+/.clinerules/
 /项目大纲.md
 
 # Build artifacts (auto-update now uses GitHub Releases API)

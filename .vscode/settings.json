@@ -1,0 +1,57 @@
+{
+    // =========================================================================
+    // 🔍 资源管理器排除 (Files Exclude)
+    // 隐藏编译产物和临时缓存，让你的 VS Code 左侧目录树变得无比干净清爽
+    // =========================================================================
+    "files.exclude": {
+        "**/.git": true,
+        "**/.idea": true,
+        "**/.gradle": true,
+        "**/build": true,
+        "**/local.properties": true,
+        "**/*.iml": true
+    },
+
+    // =========================================================================
+    // ⚡ 搜索排除 (Search Exclude)
+    // 禁止全局搜索和 AI 助手扫描编译产生的冗余目录，这会让 AI 的响应速度大幅提升，节约大量 Token
+    // =========================================================================
+    "search.exclude": {
+        "**/build": true,
+        "**/.gradle": true,
+        "**/.idea": true
+    },
+
+    // =========================================================================
+    // 📝 编码与格式化规范 (Editor Settings)
+    // =========================================================================
+    "editor.tabSize": 4,                    // Kotlin 偏好：默认 4 空格缩进
+    "editor.insertSpaces": true,            // 强制使用空格代替 Tab
+    "editor.formatOnSave": true,            // 每次保存时自动排版格式化
+
+    "[markdown]": {
+        "editor.tabSize": 2,                // Markdown 偏好：更紧凑的 2 空格缩进
+        "editor.quickSuggestions": {
+            "comments": "on",
+            "strings": "on",
+            "other": "on"
+        }
+    },
+
+    "[json]": {
+        "editor.tabSize": 2                 // JSON 偏好：2 空格缩进
+    },
+
+    // =========================================================================
+    // 🔄 规则双向同步兜底守护（可选：需要安装 "File Watcher" 插件）
+    // 作为硬链接的终极物理备份。当检测到 default-rules.md 变化，保存时立刻自动覆盖 antigravity_rules.md
+    // =========================================================================
+    "filewatcher.commands": [
+        {
+            "match": "\\.clinerules\\\\default-rules\\.md",
+            "isRegExp": true,
+            "cmd": "copy /Y \"${file}\" \"${workspaceRoot}\\.agents\\rules\\antigravity_rules.md\"",
+            "event": "onFileChange"
+        }
+    ]
+}
