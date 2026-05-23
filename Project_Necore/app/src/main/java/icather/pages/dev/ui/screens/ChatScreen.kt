@@ -109,7 +109,7 @@ fun ChatScreen(
         }
     ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color(0xFFF6F8FA),
         topBar = {
             CenterAlignedTopAppBar(
                 title = { 
@@ -139,7 +139,7 @@ fun ChatScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = Color(0xFFF6F8FA),
                     titleContentColor = MaterialTheme.colorScheme.onBackground,
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
                     actionIconContentColor = MaterialTheme.colorScheme.onBackground
