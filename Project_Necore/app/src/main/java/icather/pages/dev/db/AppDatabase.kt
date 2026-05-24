@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class], version = 11, exportSchema = false)
+@Database(entities = [Conversation::class, Message::class, ApiConfig::class, Identity::class, PromptTemplate::class, ConversationReference::class], version = 12, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun conversationDao(): ConversationDao
@@ -20,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun apiConfigDao(): ApiConfigDao
     abstract fun identityDao(): IdentityDao
     abstract fun promptTemplateDao(): PromptTemplateDao
+    abstract fun conversationReferenceDao(): ConversationReferenceDao
 
     companion object {
         @Volatile
@@ -31,7 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "chat_database"
-                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                ).addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                  .fallbackToDestructiveMigration(true)
                  .addCallback(AppDatabaseCallback(context))
                  .build()
@@ -124,6 +125,24 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE `conversations` ADD COLUMN `lastModelName` TEXT DEFAULT NULL")
                 database.execSQL("ALTER TABLE `messages` ADD COLUMN `modelName` TEXT DEFAULT NULL")
+            }
+        }
+
+        // 对话延伸 + 动态引用
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `conversations` ADD COLUMN `parentConversationId` INTEGER DEFAULT NULL")
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `conversation_references` (
+                        `conversationId` INTEGER NOT NULL,
+                        `referencedConversationId` INTEGER NOT NULL,
+                        `addedTime` INTEGER NOT NULL,
+                        PRIMARY KEY(`conversationId`, `referencedConversationId`),
+                        FOREIGN KEY(`conversationId`) REFERENCES `conversations`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`referencedConversationId`) REFERENCES `conversations`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_conversation_references_referencedConversationId` ON `conversation_references` (`referencedConversationId`)")
             }
         }
     }

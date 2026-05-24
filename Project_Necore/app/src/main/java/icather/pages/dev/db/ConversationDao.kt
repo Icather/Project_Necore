@@ -56,4 +56,8 @@ interface ConversationDao {
         ORDER BY c.isPinned DESC, c.startTime DESC
     """)
     suspend fun searchConversations(query: String): List<Conversation>
+
+    // 设置对话延伸关系
+    @Query("UPDATE conversations SET parentConversationId = :parentId WHERE id = :conversationId")
+    suspend fun setParentConversation(conversationId: Long, parentId: Long)
 }

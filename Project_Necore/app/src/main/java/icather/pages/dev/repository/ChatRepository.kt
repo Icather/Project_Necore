@@ -7,6 +7,7 @@ import icather.pages.dev.api.ApiServiceFactory
 import icather.pages.dev.db.ApiConfig
 import icather.pages.dev.db.AppDatabase
 import icather.pages.dev.db.Conversation
+import icather.pages.dev.db.ConversationReference
 import icather.pages.dev.db.Message
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -181,5 +182,27 @@ class ChatRepository(private val context: Context, private val db: AppDatabase) 
             timestamp = System.currentTimeMillis() - 30000,
             modelName = null
         ))
+    }
+
+    // ===== 对话延伸 + 动态引用 =====
+
+    // 创建延伸对话（带前置对话 ID）
+    suspend fun createContinuationConversation(title: String, parentConversationId: Long): Long = withContext(Dispatchers.IO) {
+        db.conversationDao().insert(Conversation(title = title, parentConversationId = parentConversationId))
+    }
+
+    // 挂载引用对话
+    suspend fun addConversationReference(conversationId: Long, referencedConversationId: Long) = withContext(Dispatchers.IO) {
+        db.conversationReferenceDao().insert(ConversationReference(conversationId, referencedConversationId))
+    }
+
+    // 卸载引用对话
+    suspend fun removeConversationReference(conversationId: Long, referencedConversationId: Long) = withContext(Dispatchers.IO) {
+        db.conversationReferenceDao().delete(conversationId, referencedConversationId)
+    }
+
+    // 查询当前对话的所有引用对话
+    suspend fun getReferencedConversations(conversationId: Long): List<Conversation> = withContext(Dispatchers.IO) {
+        db.conversationReferenceDao().getReferencedConversations(conversationId)
     }
 }

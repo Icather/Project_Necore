@@ -93,6 +93,14 @@ fun ChatScreen(
                 onDeleteConversation = { viewModel.deleteConversation(it) },
                 onTogglePin = { id, pinned -> viewModel.togglePin(id, pinned) },
                 onRenameConversation = { id, title -> viewModel.renameConversation(id, title) },
+                onContinueConversation = { id ->
+                    viewModel.startContinuationChat(id)
+                    coroutineScope.launch { drawerState.close() }
+                },
+                onMountConversation = { id ->
+                    viewModel.mountReference(id)
+                    coroutineScope.launch { drawerState.close() }
+                },
                 onNavigateToSettings = {
                     coroutineScope.launch { drawerState.close() }
                     onNavigateToSettings()
@@ -160,6 +168,22 @@ fun ChatScreen(
                 state = listState,
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
+                // 延伸对话跳转横幅
+                if (uiState.parentConversationId != null) {
+                    item {
+                        ContinuationBanner(
+                            parentTitle = uiState.parentConversationTitle,
+                            onClick = {
+                                val pid = uiState.parentConversationId
+                                if (pid != null && uiState.parentConversationTitle != null) {
+                                    viewModel.loadConversation(pid)
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
                 itemsIndexed(uiState.messages) { index, message ->
                     val isLastAiMessage = !message.isUser && index == uiState.messages.lastIndex
                     ChatMessageItem(
@@ -200,6 +224,23 @@ fun ChatScreen(
                             }
                             uiState.attachedFiles.forEach { uri ->
                                 Chip(text = "File", onRemove = { viewModel.removeAttachment(uri, false) })
+                            }
+                        }
+                    }
+
+                    // 引用对话芯片行
+                    if (uiState.referencedConversations.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            uiState.referencedConversations.forEach { refConvo ->
+                                Chip(
+                                    text = "\uD83D\uDCCE ${refConvo.title.take(15)}",
+                                    onRemove = { viewModel.unmountReference(refConvo.id) }
+                                )
                             }
                         }
                     }
@@ -799,6 +840,8 @@ fun HistoryDrawerContent(
     onDeleteConversation: (Long) -> Unit,
     onTogglePin: (Long, Boolean) -> Unit,
     onRenameConversation: (Long, String) -> Unit,
+    onContinueConversation: (Long) -> Unit,
+    onMountConversation: (Long) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToUsage: () -> Unit,
     onNavigateToApiConfig: () -> Unit
@@ -845,10 +888,13 @@ fun HistoryDrawerContent(
                         ConversationDrawerItem(
                             conversation = conv,
                             isActive = conv.id == currentConversationId,
+                            currentConversationId = currentConversationId,
                             onClick = { onConversationClick(conv.id) },
                             onDelete = { onDeleteConversation(conv.id) },
                             onTogglePin = { onTogglePin(conv.id, conv.isPinned) },
-                            onRename = { newTitle -> onRenameConversation(conv.id, newTitle) }
+                            onRename = { newTitle -> onRenameConversation(conv.id, newTitle) },
+                            onContinue = { onContinueConversation(conv.id) },
+                            onMount = { onMountConversation(conv.id) }
                         )
                     }
                 }
@@ -894,10 +940,13 @@ private fun DrawerBottomButton(
 private fun ConversationDrawerItem(
     conversation: icather.pages.dev.db.Conversation,
     isActive: Boolean,
+    currentConversationId: Long?,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onTogglePin: () -> Unit,
-    onRename: (String) -> Unit
+    onRename: (String) -> Unit,
+    onContinue: () -> Unit,
+    onMount: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -954,6 +1003,20 @@ private fun ConversationDrawerItem(
                 leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 onClick = { renameText = conversation.title; showRenameDialog = true; showMenu = false }
             )
+            // 延伸此对话
+            DropdownMenuItem(
+                text = { Text("延伸此对话") },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.CallSplit, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                onClick = { onContinue(); showMenu = false }
+            )
+            // 挂载到当前对话（仅当有活跃对话且不是自身时显示）
+            if (currentConversationId != null && currentConversationId != conversation.id) {
+                DropdownMenuItem(
+                    text = { Text("挂载到当前对话") },
+                    leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    onClick = { onMount(); showMenu = false }
+                )
+            }
             DropdownMenuItem(
                 text = { Text("删除", color = MaterialTheme.colorScheme.error) },
                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error) },
@@ -1183,5 +1246,68 @@ fun getTruncatedDisplayText(text: String, maxLength: Int = 40): String {
         cleanText.take(maxLength) + "..."
     } else {
         cleanText
+    }
+}
+
+/**
+ * 延伸对话跳转横幅 — 显示在聊天顶部，标注"延伸自「XXX」"
+ */
+@Composable
+fun ContinuationBanner(
+    parentTitle: String?,
+    onClick: () -> Unit
+) {
+    val isDeleted = parentTitle == null
+
+    Surface(
+        onClick = { if (!isDeleted) onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = if (isDeleted)
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        else
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        border = BorderStroke(
+            1.dp,
+            if (isDeleted)
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)
+            else
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Link,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = if (isDeleted)
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                else
+                    MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (isDeleted) "原对话已删除" else "延伸自「${parentTitle}」",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isDeleted)
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                else
+                    MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (!isDeleted) {
+                Icon(
+                    imageVector = Icons.Filled.ChevronRight,
+                    contentDescription = "跳转到原对话",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                )
+            }
+        }
     }
 }

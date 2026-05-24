@@ -41,7 +41,11 @@ data class ChatUiState(
     val drawerSearchQuery: String = "",  // H1: 侧边栏搜索关键词
     val isGenerating: Boolean = false, // H3: 是否正在生成回复
     val branchTree: TopicBranchTree? = null, // 分支历史树状态
-    val isBranchPanelOpen: Boolean = false   // 分支历史面板显式弹起状态
+    val isBranchPanelOpen: Boolean = false,   // 分支历史面板显式弹起状态
+    // 对话延伸 + 动态引用
+    val parentConversationId: Long? = null,      // 延伸自的对话 ID
+    val parentConversationTitle: String? = null,  // 延伸自的对话标题（UI 显示用）
+    val referencedConversations: List<icather.pages.dev.db.Conversation> = emptyList() // 动态引用的对话列表
 )
 
 class ChatViewModel(
@@ -226,12 +230,72 @@ class ChatViewModel(
     }
 
     fun startNewChat() {
+        pendingParentConversationId = null
         _uiState.value = _uiState.value.copy(
             currentConversationId = null,
             messages = emptyList(),
-            title = ""
+            title = "",
+            parentConversationId = null,
+            parentConversationTitle = null,
+            referencedConversations = emptyList()
         )
         resetAttachments()
+    }
+
+    // ===== 对话延伸 =====
+
+    // 延伸对话创建前的临时状态：尚未创建 DB 记录，等第一条消息时才创建
+    private var pendingParentConversationId: Long? = null
+
+    /**
+     * 从侧边栏触发：开始一个延伸自指定对话的新对话。
+     * 此时只设置 UI 状态和内存标记，不创建 DB 记录（等 ensureConversationExists 时创建）。
+     */
+    fun startContinuationChat(parentConversationId: Long) {
+        viewModelScope.launch {
+            val parentConversation = repository.getConversation(parentConversationId)
+            val parentTitle = parentConversation?.title ?: "未知对话"
+            pendingParentConversationId = parentConversationId
+            _uiState.value = _uiState.value.copy(
+                currentConversationId = null,
+                messages = emptyList(),
+                title = "",
+                parentConversationId = parentConversationId,
+                parentConversationTitle = parentTitle,
+                referencedConversations = emptyList()
+            )
+            resetAttachments()
+        }
+    }
+
+    // ===== 动态引用/挂载 =====
+
+    /** 挂载引用对话（侧边栏长按菜单触发） */
+    fun mountReference(referencedConversationId: Long) {
+        val conversationId = _uiState.value.currentConversationId ?: return
+        if (referencedConversationId == conversationId) return // 不能引用自身
+        viewModelScope.launch {
+            repository.addConversationReference(conversationId, referencedConversationId)
+            loadReferences()
+        }
+    }
+
+    /** 卸载引用对话（芯片 × 触发） */
+    fun unmountReference(referencedConversationId: Long) {
+        val conversationId = _uiState.value.currentConversationId ?: return
+        viewModelScope.launch {
+            repository.removeConversationReference(conversationId, referencedConversationId)
+            loadReferences()
+        }
+    }
+
+    /** 加载当前对话的所有引用对话 */
+    private fun loadReferences() {
+        val conversationId = _uiState.value.currentConversationId ?: return
+        viewModelScope.launch {
+            val refs = repository.getReferencedConversations(conversationId)
+            _uiState.value = _uiState.value.copy(referencedConversations = refs)
+        }
     }
 
     // 消息版本分支 — 内存中追踪每个分支组的活跃分支序号
@@ -303,10 +367,22 @@ class ChatViewModel(
                 i++
             }
 
+            // 加载延伸关系
+            val parentId = conversation?.parentConversationId
+            val parentTitle = if (parentId != null) {
+                repository.getConversation(parentId)?.title
+            } else null
+
+            // 加载引用对话
+            val refs = repository.getReferencedConversations(conversationId)
+
             _uiState.value = _uiState.value.copy(
                 currentConversationId = conversationId,
                 title = conversation?.title ?: "Chat",
-                messages = displayMessages
+                messages = displayMessages,
+                parentConversationId = parentId,
+                parentConversationTitle = parentTitle,
+                referencedConversations = refs
             )
             resetAttachments()
         }
@@ -345,6 +421,69 @@ class ChatViewModel(
         )
     }
 
+    /**
+     * 上下文注入管线：将延伸对话和引用对话的消息注入到 API 请求的 historyMessages 中。
+     *
+     * 注入顺序（在 System Prompt 之后、当前对话消息之前）：
+     * 1. 延伸对话的全量历史消息
+     * 2. 各引用对话的全量历史消息（按挂载时间排序，每个前后有 system 分隔标记）
+     * 3. 分隔标记 "[以上是参考上下文。以下是当前对话。]"
+     */
+    private suspend fun injectContinuationAndReferenceContext(
+        conversationId: Long,
+        historyMessages: MutableList<ApiService.ApiMessage>
+    ) {
+        val parentId = _uiState.value.parentConversationId
+        val referencedConversations = _uiState.value.referencedConversations
+
+        // 无延伸也无引用 → 直接返回
+        if (parentId == null && referencedConversations.isEmpty()) return
+
+        // 计算插入位置：System Prompt 之后（如果有 system 消息在索引 0 则跳过）
+        val insertIndex = if (historyMessages.isNotEmpty() && historyMessages[0].role == "system") 1 else 0
+
+        // 构建要注入的上下文消息列表
+        val contextMessages = mutableListOf<ApiService.ApiMessage>()
+
+        // 1. 延伸对话上下文
+        if (parentId != null) {
+            val parentConvo = repository.getConversation(parentId)
+            if (parentConvo != null) {
+                contextMessages.add(ApiService.ApiMessage.text("system", "[以下是前置对话「${parentConvo.title}」的上下文延伸：]"))
+                val parentMsgs = repository.getMessagesForConversation(parentId)
+                contextMessages.addAll(cleanMessagesForContext(parentMsgs))
+            }
+        }
+
+        // 2. 引用对话上下文
+        for (refConvo in referencedConversations) {
+            contextMessages.add(ApiService.ApiMessage.text("system", "[以下是挂载的参考对话「${refConvo.title}」的内容：]"))
+            val refMsgs = repository.getMessagesForConversation(refConvo.id)
+            contextMessages.addAll(cleanMessagesForContext(refMsgs))
+        }
+
+        // 3. 分隔标记
+        if (contextMessages.isNotEmpty()) {
+            contextMessages.add(ApiService.ApiMessage.text("system", "[以上是参考上下文。以下是当前对话。]"))
+        }
+
+        // 批量插入
+        historyMessages.addAll(insertIndex, contextMessages)
+    }
+
+    /** 将 DB Message 列表清洗为 API 消息格式（去思考链、去情绪标签） */
+    private fun cleanMessagesForContext(messages: List<Message>): List<ApiService.ApiMessage> {
+        return messages.map { msg ->
+            val role = if (msg.isUser) "user" else "assistant"
+            val content = msg.text
+                .replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "")
+                .replace(Regex("<font color='#999999'>.*?</font><br>", RegexOption.DOT_MATCHES_ALL), "")
+                .replace(Regex("""\[emotion:\w+]"""), "")
+                .trim()
+            ApiService.ApiMessage.text(role, content)
+        }
+    }
+
     fun sendMessage(text: String) {
         val config = _uiState.value.activeApiConfig
         val images = _uiState.value.attachedImages
@@ -380,7 +519,14 @@ class ChatViewModel(
         var id = _uiState.value.currentConversationId
         if (id == null) {
             val title = firstMessage.take(30)
-            id = repository.createNewConversation(title)
+            val parentId = pendingParentConversationId
+            id = if (parentId != null) {
+                // 延伸对话：创建带 parentConversationId 的新对话
+                pendingParentConversationId = null
+                repository.createContinuationConversation(title, parentId)
+            } else {
+                repository.createNewConversation(title)
+            }
             _uiState.value = _uiState.value.copy(currentConversationId = id, title = title)
         }
         return id
@@ -497,6 +643,9 @@ class ChatViewModel(
             val fullSystemPrompt = systemPromptParts.joinToString("\n\n")
             historyMessages.add(0, ApiService.ApiMessage.text("system", fullSystemPrompt))
         }
+
+        // ===== 对话延伸 + 动态引用 — 上下文注入 =====
+        injectContinuationAndReferenceContext(conversationId, historyMessages)
 
         // 多模态图片注入：如果有附件图片且模型支持视觉，替换最后一条用户消息为多模态格式
         val attachedImages = _uiState.value.attachedImages
@@ -947,6 +1096,9 @@ class ChatViewModel(
         if (systemPromptParts.isNotEmpty()) {
             historyMessages.add(0, ApiService.ApiMessage.text("system", systemPromptParts.joinToString("\n\n")))
         }
+
+        // ===== 对话延伸 + 动态引用 — 上下文注入 =====
+        injectContinuationAndReferenceContext(conversationId, historyMessages)
 
         val aiMessageIndex = _uiState.value.messages.size
         addMessageToView(ChatMessage("", false, isHtml = true, isStreaming = true))

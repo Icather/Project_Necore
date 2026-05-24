@@ -11,5 +11,6 @@ data class Conversation(
     // Let's add a title to easily identify conversations
     var title: String = "New Conversation",
     val isPinned: Boolean = false,
-    val lastModelName: String? = null  // 最后一次使用的模型名称
+    val lastModelName: String? = null,  // 最后一次使用的模型名称
+    val parentConversationId: Long? = null  // 延伸自哪个对话的 ID
 )
