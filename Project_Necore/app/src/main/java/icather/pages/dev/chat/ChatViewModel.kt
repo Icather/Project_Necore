@@ -484,6 +484,62 @@ class ChatViewModel(
         }
     }
 
+    /**
+     * 大模型自动命名对话 — 后台异步执行，不阻塞主流程。
+     *
+     * 构建极简 prompt：第一轮用户消息 + AI 回复 + 标题生成指令。
+     * 由于与刚完成的聊天请求共享大部分相同的 prefix，Context Caching
+     * 会使输入 Token 几乎全部命中缓存，成本极低。
+     */
+    private fun launchAutoTitleGeneration(
+        conversationId: Long,
+        userText: String,
+        aiText: String,
+        config: ApiConfig
+    ) {
+        viewModelScope.launch {
+            try {
+                val service = apiService ?: return@launch
+
+                // 构建标题生成的消息序列（极简，最大化缓存命中）
+                val titleMessages = listOf(
+                    ApiService.ApiMessage.text("user", userText),
+                    ApiService.ApiMessage.text("assistant", aiText.take(500)), // 截断 AI 回复，减少开销
+                    ApiService.ApiMessage.text("user", "请为以上对话提取一个简短的标题，不超过15个字。只输出标题文本本身，不要包含引号、书名号或任何多余的符号和解释。")
+                )
+
+                val options = mapOf<String, Any>(
+                    "thinking_mode" to false,
+                    "model_name" to config.modelName
+                )
+
+                val titleContent = StringBuilder()
+                repository.getCompletion(service, titleMessages, config.apiKey, options)
+                    .catch { /* 标题生成失败时静默忽略，保留原标题 */ }
+                    .collect { chunk ->
+                        chunk.content?.let { titleContent.append(it) }
+                    }
+
+                val generatedTitle = titleContent.toString()
+                    .replace(Regex("""^["「『《]+|["」』》]+$"""), "") // 清除大模型可能输出的引号
+                    .replace("\n", " ")
+                    .trim()
+                    .take(30)
+
+                if (generatedTitle.isNotBlank()) {
+                    repository.renameConversation(conversationId, generatedTitle)
+                    // 如果当前对话仍是同一个，更新 UI 标题
+                    if (_uiState.value.currentConversationId == conversationId) {
+                        _uiState.value = _uiState.value.copy(title = generatedTitle)
+                    }
+                    loadConversations() // 刷新侧边栏
+                }
+            } catch (_: Exception) {
+                // 标题生成是 best-effort，任何异常都不应影响用户体验
+            }
+        }
+    }
+
     fun sendMessage(text: String) {
         val config = _uiState.value.activeApiConfig
         val images = _uiState.value.attachedImages
@@ -847,6 +903,14 @@ class ChatViewModel(
 
             // 更新对话最后使用的模型
             repository.setConversationLastModel(conversationId, config.modelName)
+
+            // ===== 大模型自动命名对话 =====
+            // 触发条件：第一轮对话完成（发送前只有 1 条用户消息）
+            if (dbMessages.size == 1) {
+                val userText = dbMessages[0].text
+                val aiText = emotionResult.cleanText
+                launchAutoTitleGeneration(conversationId, userText, aiText, config)
+            }
         }
 
         // ===== G2: 模型 Fallback 链执行 =====
