@@ -2,6 +2,14 @@
   "provider_info": {
     "id": "qwq-plus",
     "display_name": "QwQ-Plus 深度推理 (百炼)",
+    "provider_display_names": {
+      "en": "Alibaba Cloud Bailian",
+      "zh": "阿里云百炼",
+      "ja": "アリババクラウド百錬",
+      "ru": "Alibaba Cloud Bailian",
+      "es": "Alibaba Cloud Bailian",
+      "pt": "Alibaba Cloud Bailian"
+    },
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "is_openai_compatible": true,
     "available_models": [

@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import icather.pages.dev.R
 import icather.pages.dev.api.plugin.PluginManagerViewModel
 import icather.pages.dev.api.plugin.PluginManagerViewModel.PluginStatus
 
@@ -48,10 +50,10 @@ fun PluginManagerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("提供商协议插件") },
+                title = { Text(stringResource(R.string.plugin_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -59,7 +61,7 @@ fun PluginManagerScreen(
                         onClick = { viewModel.refresh() },
                         enabled = !uiState.isLoading
                     ) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "刷新")
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.sync_refresh))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -94,7 +96,7 @@ fun PluginManagerScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedButton(onClick = { viewModel.refresh() }) {
-                        Text("重试")
+                        Text(stringResource(R.string.sync_retry))
                     }
                 }
             } else {
@@ -105,7 +107,7 @@ fun PluginManagerScreen(
                     // 顶部说明
                     item {
                         Text(
-                            text = "从 GitHub 仓库下载协议插件，无需重新安装即可扩展模型支持。",
+                            text = stringResource(R.string.plugin_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -118,7 +120,7 @@ fun PluginManagerScreen(
                     }
                     if (installedPlugins.isNotEmpty()) {
                         item {
-                            SectionHeader("已安装 (${installedPlugins.size})")
+                            SectionHeader(stringResource(R.string.plugin_installed_count, installedPlugins.size))
                         }
                         items(installedPlugins, key = { "installed_${it.fileName}" }) { plugin ->
                             PluginCard(
@@ -135,7 +137,7 @@ fun PluginManagerScreen(
                     }
                     if (remotePlugins.isNotEmpty()) {
                         item {
-                            SectionHeader("可下载 (${remotePlugins.size})")
+                            SectionHeader(stringResource(R.string.plugin_downloadable_count, remotePlugins.size))
                         }
                         items(remotePlugins, key = { "remote_${it.fileName}" }) { plugin ->
                             PluginCard(
@@ -221,8 +223,8 @@ private fun PluginCard(
                 )
                 Text(
                     text = when (plugin.status) {
-                        is PluginStatus.BuiltIn -> "内置 · ${plugin.fileName}"
-                        is PluginStatus.Downloaded -> "已下载 · ${plugin.fileName}"
+                        is PluginStatus.BuiltIn -> stringResource(R.string.plugin_status_builtin, plugin.fileName)
+                        is PluginStatus.Downloaded -> stringResource(R.string.plugin_status_downloaded, plugin.fileName)
                         is PluginStatus.Remote -> plugin.fileName
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -239,7 +241,7 @@ private fun PluginCard(
                 is PluginStatus.BuiltIn -> {
                     // 内置插件不可操作
                     Text(
-                        text = "内置",
+                        text = stringResource(R.string.plugin_status_builtin, "").trim(),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -249,7 +251,7 @@ private fun PluginCard(
                     IconButton(onClick = onDelete) {
                         Icon(
                             Icons.Filled.Delete,
-                            contentDescription = "删除",
+                            contentDescription = stringResource(R.string.plugin_btn_delete),
                             tint = MaterialTheme.colorScheme.error
                         )
                     }
@@ -265,7 +267,7 @@ private fun PluginCard(
                         IconButton(onClick = onDownload) {
                             Icon(
                                 Icons.Filled.CloudDownload,
-                                contentDescription = "下载",
+                                contentDescription = stringResource(R.string.plugin_btn_download),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }

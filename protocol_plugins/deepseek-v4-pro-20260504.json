@@ -2,6 +2,14 @@
   "provider_info": {
     "id": "deepseek-v4-pro",
     "display_name": "DeepSeek V4 Pro (DeepSeek)",
+    "provider_display_names": {
+      "en": "DeepSeek",
+      "zh": "DeepSeek",
+      "ja": "DeepSeek",
+      "ru": "DeepSeek",
+      "es": "DeepSeek",
+      "pt": "DeepSeek"
+    },
     "base_url": "https://api.deepseek.com/v1",
     "is_openai_compatible": true,
     "available_models": ["deepseek-v4-pro", "deepseek-v4-flash"]

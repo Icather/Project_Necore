@@ -254,7 +254,7 @@ class ChatViewModel(
     fun startContinuationChat(parentConversationId: Long) {
         viewModelScope.launch {
             val parentConversation = repository.getConversation(parentConversationId)
-            val parentTitle = parentConversation?.title ?: "未知对话"
+            val parentTitle = parentConversation?.title ?: "Unknown Chat"
             pendingParentConversationId = parentConversationId
             _uiState.value = _uiState.value.copy(
                 currentConversationId = null,

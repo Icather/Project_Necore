@@ -20,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
+import icather.pages.dev.R
 import icather.pages.dev.api.plugin.ProtocolRegistry
 import icather.pages.dev.db.ApiConfig
 
@@ -312,7 +314,7 @@ fun AddApiDialog(
                     value = displayName,
                     onValueChange = { displayName = it },
                     label = { Text("Display Name (显示名称)") },
-                    placeholder = { Text(modelName.ifBlank { "未选择模型" }) },
+                    placeholder = { Text(modelName.ifBlank { stringResource(R.string.hint_model_not_selected) }) },
                     modifier = Modifier.fillMaxWidth()
                 )
 

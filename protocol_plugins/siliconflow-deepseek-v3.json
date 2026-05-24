@@ -2,6 +2,14 @@
   "provider_info": {
     "id": "deepseek-ai/DeepSeek-V3",
     "display_name": "DeepSeek V3 (硅基流动)",
+    "provider_display_names": {
+      "en": "SiliconFlow",
+      "zh": "硅基流动",
+      "ja": "SiliconFlow",
+      "ru": "SiliconFlow",
+      "es": "SiliconFlow",
+      "pt": "SiliconFlow"
+    },
     "base_url": "https://api.siliconflow.cn/v1",
     "is_openai_compatible": true,
     "available_models": ["deepseek-ai/DeepSeek-V3", "deepseek-ai/DeepSeek-R1", "Qwen/Qwen3-235B-A22B", "Qwen/Qwen2.5-72B-Instruct", "THUDM/GLM-4-9B-0414"]

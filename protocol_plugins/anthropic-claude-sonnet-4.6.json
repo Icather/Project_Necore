@@ -2,6 +2,14 @@
   "provider_info": {
     "id": "claude-sonnet-4-20260514",
     "display_name": "Claude Sonnet 4.6 (Anthropic)",
+    "provider_display_names": {
+      "en": "Anthropic",
+      "zh": "Anthropic",
+      "ja": "Anthropic",
+      "ru": "Anthropic",
+      "es": "Anthropic",
+      "pt": "Anthropic"
+    },
     "base_url": "https://api.anthropic.com",
     "is_openai_compatible": false,
     "available_models": ["claude-sonnet-4-20260514", "claude-opus-4-20260514", "claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022"]

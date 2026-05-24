@@ -12,7 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import icather.pages.dev.R
 import icather.pages.dev.db.Identity
 
 /**
@@ -40,10 +42,10 @@ fun IdentityScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI 人设管理") },
+                title = { Text(stringResource(R.string.identity_management)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -51,7 +53,7 @@ fun IdentityScreen(
                         editingIdentity = null
                         showEditDialog = true
                     }) {
-                        Icon(Icons.Filled.Add, contentDescription = "创建新人设")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.create_new_identity))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -66,7 +68,7 @@ fun IdentityScreen(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("暂无人设配置", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.empty_identities), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyColumn(
@@ -131,7 +133,7 @@ private fun IdentityCard(
             // 激活指示器
             Icon(
                 imageVector = if (isActive) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                contentDescription = if (isActive) "当前激活" else "未激活",
+                contentDescription = if (isActive) stringResource(R.string.menu_pin) else stringResource(R.string.menu_unpin),
                 tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(24.dp)
             )
@@ -156,10 +158,10 @@ private fun IdentityCard(
 
             // 操作按钮
             IconButton(onClick = onEdit) {
-                Icon(Icons.Filled.Edit, contentDescription = "编辑", modifier = Modifier.size(20.dp))
+                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.menu_rename), modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = "删除", modifier = Modifier.size(20.dp),
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete), modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.error)
             }
         }
@@ -178,22 +180,22 @@ private fun IdentityEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (identity == null) "创建新人设" else "编辑人设") },
+        title = { Text(if (identity == null) stringResource(R.string.create_new_identity) else stringResource(R.string.edit_identity)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("人设名称") },
-                    placeholder = { Text("例如：猫娘、英语老师") },
+                    label = { Text(stringResource(R.string.label_identity_name)) },
+                    placeholder = { Text(stringResource(R.string.hint_identity_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = systemPrompt,
                     onValueChange = { systemPrompt = it },
-                    label = { Text("系统提示词") },
-                    placeholder = { Text("定义 AI 的性格、说话方式和行为规则...") },
+                    label = { Text(stringResource(R.string.label_identity_prompt)) },
+                    placeholder = { Text(stringResource(R.string.hint_identity_prompt)) },
                     minLines = 3,
                     maxLines = 8,
                     modifier = Modifier.fillMaxWidth()
@@ -201,8 +203,8 @@ private fun IdentityEditDialog(
                 OutlinedTextField(
                     value = greeting,
                     onValueChange = { greeting = it },
-                    label = { Text("开场白（可选）") },
-                    placeholder = { Text("首次对话时 AI 的问候语...") },
+                    label = { Text(stringResource(R.string.label_greeting)) },
+                    placeholder = { Text(stringResource(R.string.hint_greeting)) },
                     minLines = 2,
                     maxLines = 4,
                     modifier = Modifier.fillMaxWidth()
@@ -226,12 +228,12 @@ private fun IdentityEditDialog(
                 },
                 enabled = name.isNotBlank() && systemPrompt.isNotBlank()
             ) {
-                Text("保存")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

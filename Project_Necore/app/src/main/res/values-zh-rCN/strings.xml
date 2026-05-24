@@ -1,42 +1,153 @@
 <resources>
     <string name="app_name">Necore</string>
-    <string name="type_a_message">输入消息...</string>
-    <string name="upload_image">上传图片</string>
-    <string name="upload_file">上传文件</string>
+
+    <!-- Common -->
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="confirm">确定</string>
+    <string name="back">返回</string>
     <string name="send">发送</string>
+    <string name="error">错误：%s</string>
     <string name="error_occurred">发生错误</string>
-    <string name="copy_error">复制错误</string>
+    <string name="network_error">网络错误：%s</string>
+    <string name="copied_to_clipboard">已复制到剪贴板</string>
+    <string name="error_copied">错误信息已复制</string>
+
+    <!-- Chat Screen -->
+    <string name="chat_default_title">新对话</string>
+    <string name="msg_or_hold_to_speak">发消息或按住说话</string>
+    <string name="deep_thinking">深度思考</string>
+    <string name="web_search">联网搜索</string>
+    <string name="attachment_image">图片</string>
+    <string name="attachment_file">文件</string>
+    <string name="ai_response_clip_label">AI 回复</string>
+    <string name="search_chats">搜索对话…</string>
+    <string name="menu_pin">置顶</string>
+    <string name="menu_unpin">取消置顶</string>
+    <string name="menu_rename">重命名</string>
+    <string name="menu_delete">删除</string>
+    <string name="menu_continue_chat">延伸此对话</string>
+    <string name="menu_mount_to_current">挂载到当前对话</string>
+    <string name="rename_dialog_title">重命名对话</string>
+    <string name="continuation_banner">延伸自「%s」</string>
+    <string name="continuation_deleted">原对话已删除</string>
+    <string name="drawer_settings">设置</string>
+    <string name="drawer_usage">用量</string>
+    <string name="drawer_api_config">API</string>
+    <string name="new_chat">新对话</string>
+    <string name="history">历史记录</string>
     <string name="chat_history">聊天记录</string>
+    <string name="clear_history">清除历史记录</string>
+    <string name="select_a_model">选择模型</string>
+    <string name="remove_attachment">删除附件</string>
+    <string name="label_copy">复制</string>
+    <string name="label_share">分享</string>
+    <string name="label_share_reply">分享回复</string>
+    <string name="label_regenerate">重新生成</string>
+    <string name="label_edit">编辑</string>
+    <string name="edit_message_title">编辑消息</string>
+    <string name="btn_resend">重新发送</string>
+    <string name="thinking_in_progress">思考中…</string>
+    <string name="thinking_process">思考过程</string>
+    <string name="token_context">上下文 %s</string>
+    <string name="token_output">输出 %s</string>
+    <string name="label_provider_default">提供商</string>
+    <string name="label_model_default">模型</string>
+    <string name="version_indicator">版本 %1$d / %2$d</string>
+    <string name="branches_count">%d 个分支</string>
+    <string name="branch_history">分支对话历史</string>
+    <string name="collapse">收起</string>
+    <string name="no_branch_history">暂无分支历史记录</string>
+    <string name="open_branches">打开分支</string>
+    <string name="previous_version">上一个版本</string>
+    <string name="next_version">下一个版本</string>
+    <string name="jump_to_original">跳转到原对话</string>
+    <string name="group_pinned">置顶</string>
+    <string name="group_today">今天</string>
+    <string name="group_yesterday">昨天</string>
+    <string name="group_older">更早</string>
+    <string name="group_week">7 天内</string>
+    <string name="group_month">30 天内</string>
+
+    <!-- ChatViewModel -->
+    <string name="error_api_init">API 初始化失败：%s</string>
+    <string name="error_api_key_not_set">API 密钥未设置。</string>
+    <string name="error_attach_image_ocr">请先添加一张图片以使用 OCR。</string>
+    <string name="fallback_trying">⚡ 主模型失败，正在尝试自动降级…</string>
+    <string name="fallback_trying_model">⚡ 正在尝试备选模型：%s…</string>
+    <string name="fallback_note">[⚡ 已自动降级至 %s]\n</string>
+    <string name="fallback_all_failed">⚠️ 所有模型均不可用。请检查 API 配置。</string>
+    <string name="tool_calling">🔧 正在执行工具调用…</string>
+
+    <!-- Prompt Skeleton -->
+    <string name="prompt_label_memory">[用户档案（长期记忆）]</string>
+    <string name="prompt_label_continuation">[来自前序对话「%s」的上下文：]</string>
+    <string name="prompt_label_reference">[已挂载的参考对话「%s」：]</string>
+    <string name="prompt_label_context_end">[参考上下文结束，以下为当前对话。]</string>
+
+    <!-- API Config Screen -->
+    <string name="api_configuration">API 配置</string>
+    <string name="api_configurations">API 配置</string>
+    <string name="add_api_configuration">新增 API 配置</string>
+    <string name="edit_api_configuration">编辑 API 配置</string>
+    <string name="label_provider">提供商</string>
+    <string name="label_model_name">模型名称</string>
+    <string name="label_model_name_manual">手动输入模型名称</string>
+    <string name="label_display_name">显示名称</string>
+    <string name="label_api_key">API 密钥</string>
+    <string name="hint_plugin_download">需要更多提供商？点此下载插件。</string>
+    <string name="btn_back_to_presets">← 返回预设列表</string>
+    <string name="models_available_count">%d 个模型可用</string>
+    <string name="manual_input_model">✏️ 手动输入模型名称</string>
+    <string name="hint_model_not_selected">未选择模型</string>
     <string name="api_name">名称</string>
     <string name="api_key">API 密钥</string>
-    <string name="save">保存</string>
-    <string name="api_configuration">API 配置</string>
-    <string name="select_a_model">选择一个模型</string>
-    <string name="remove_attachment">删除附件</string>
-    <string name="clear_history">清除历史记录</string>
-    <string name="settings">设置</string>
-    <string name="new_chat">新的聊天</string>
-    <string name="history">历史记录</string>
+    <string name="api_key_display">API 密钥</string>
     <string name="api_key_not_set">API 密钥未设置，请在设置中配置。</string>
-    <string name="network_error">网络错误：%s</string>
-    <string name="error">发生错误：%s</string>
-    <string name="copied_to_clipboard">已复制到剪贴板</string>
-    <string name="please_attach_image_for_ocr">请为 OCR 模型附加一张图片</string>
     <string name="api_saved">API 已保存</string>
     <string name="name_and_key_cannot_be_empty">名称和密钥不能为空</string>
     <string name="provider">提供商</string>
     <string name="type">类型</string>
-    <string name="api_key_display">API密钥</string>
     <string name="using_built_in_key">使用内置密钥</string>
     <string name="not_set">未设置</string>
-    <string name="add_new_api_config">添加新的API配置</string>
-    <string name="export_api_configs">导出API配置</string>
-    <string name="import_api_configs">导入API配置</string>
-    <string name="delete_api_config_title">删除API配置</string>
-    <string name="delete_api_config_message">您确定要删除此API配置吗？</string>
-    <string name="delete">删除</string>
-    <string name="cancel">取消</string>
+    <string name="add_new_api_config">添加新的 API 配置</string>
+    <string name="delete_api_config_title">删除 API 配置</string>
+    <string name="delete_api_config_message">确定要删除此 API 配置吗？</string>
 
+    <!-- Settings Screen -->
+    <string name="settings">设置</string>
+    <string name="group_model_service">模型与服务</string>
+    <string name="settings_protocol_plugins">提供商协议插件</string>
+    <string name="settings_prompt_templates">提示词模板</string>
+    <string name="group_chat_experience">对话体验</string>
+    <string name="settings_image_compress">图片自动压缩</string>
+    <string name="settings_image_compress_on">已开启 · 自动压缩至安全分辨率</string>
+    <string name="settings_image_compress_off">已关闭 · 限制总大小 20MB</string>
+    <string name="settings_model_fallback">模型自动降级</string>
+    <string name="settings_model_fallback_on">已开启 · 主模型失败自动切换备选</string>
+    <string name="settings_model_fallback_off">已关闭 · 仅使用当前模型</string>
+    <string name="group_soul_engine">灵魂引擎</string>
+    <string name="settings_identity">AI 人设系统</string>
+    <string name="settings_identity_on">已开启 · 可切换不同 AI 人格</string>
+    <string name="settings_identity_off">已关闭 · 使用默认行为</string>
+    <string name="settings_manage_identity">管理 AI 人设</string>
+    <string name="settings_memory">长期记忆</string>
+    <string name="settings_memory_on">已开启 · AI 会记住你的偏好</string>
+    <string name="settings_memory_off">已关闭 · 每次对话独立</string>
+    <string name="settings_emotion">情绪感知</string>
+    <string name="settings_emotion_on">已开启 · AI 会表达情绪变化</string>
+    <string name="settings_emotion_off">已关闭 · 纯理性模式</string>
+    <string name="group_data_management">数据管理</string>
+    <string name="settings_usage_stats">用量统计</string>
+    <string name="settings_lan_sync">局域网同步</string>
+    <string name="group_general">通用</string>
+    <string name="language">语言</string>
+    <string name="about">关于</string>
+
+    <!-- Data Management -->
+    <string name="export_api_configs">导出 API 配置</string>
+    <string name="import_api_configs">导入 API 配置</string>
     <string name="export_chat_history">导出聊天记录</string>
     <string name="import_chat_history">导入聊天记录</string>
     <string name="export_all">导出全部</string>
@@ -47,23 +158,128 @@
     <string name="choose_import_mode">请选择导入聊天记录的方式。</string>
     <string name="no_history_to_export">没有聊天记录可导出。</string>
     <string name="export_successful">导出成功</string>
-    <string name="export_failed">导出失败: %s</string>
+    <string name="export_failed">导出失败：%s</string>
     <string name="import_successful_messages">导入成功。导入了 %1$d 个对话和 %2$d 条消息。</string>
-    <string name="import_failed">导入失败: %s</string>
+    <string name="import_failed">导入失败：%s</string>
     <string name="select_conversations_to_export">选择要导出的对话</string>
     <string name="export">导出</string>
     <string name="select_all">全选</string>
     <string name="deselect_all">取消全选</string>
-    <string name="about">关于</string>
+
+    <!-- About -->
     <string name="project_homepage">项目主页</string>
     <string name="open_source_licenses">开源许可</string>
     <string name="check_for_updates">检查更新</string>
     <string name="version_name">版本 %s</string>
     <string name="checking_for_updates">正在检查更新</string>
-    <string name="latest_version">您已是最新版本</string>
+    <string name="latest_version">已是最新版本</string>
     <string name="check_for_updates_failed">检查更新失败</string>
     <string name="updating_necore">正在更新 Necore</string>
     <string name="downloading_update">正在下载更新</string>
     <string name="download_failed">下载失败</string>
-    <string name="language">语言</string>
+
+    <!-- Prompt Template Screen -->
+    <string name="prompt_templates">提示词模板</string>
+    <string name="label_system_prompt">系统提示词</string>
+    <string name="empty_templates">暂无模板</string>
+    <string name="empty_templates_hint">点击右上角 + 创建第一个模板</string>
+    <string name="built_in_templates">内置模板</string>
+    <string name="custom_templates">自定义模板</string>
+    <string name="new_template">新建模板</string>
+    <string name="edit_template">编辑模板</string>
+    <string name="label_icon">图标</string>
+    <string name="label_name">名称</string>
+
+    <!-- Identity Screen -->
+    <string name="identity_management">AI 人设管理</string>
+    <string name="create_new_identity">创建新人设</string>
+    <string name="edit_identity">编辑人设</string>
+    <string name="empty_identities">暂无人设配置</string>
+    <string name="label_identity_name">人设名称</string>
+    <string name="hint_identity_name">例如：猫娘、英语老师</string>
+    <string name="label_identity_prompt">系统提示词</string>
+    <string name="hint_identity_prompt">定义 AI 的性格、说话方式和行为规则…</string>
+    <string name="label_greeting">开场白（可选）</string>
+    <string name="hint_greeting">首次对话时 AI 的问候语…</string>
+
+    <!-- Usage Screen -->
+    <string name="usage_title">用量统计</string>
+    <string name="usage_overview">总览</string>
+    <string name="usage_total_tokens">总 Token</string>
+    <string name="usage_conversations">对话数</string>
+    <string name="usage_input_tokens">输入 Token</string>
+    <string name="usage_output_tokens">输出 Token</string>
+    <string name="usage_cache_hits">缓存命中</string>
+    <string name="usage_ai_replies">AI 回复数</string>
+    <string name="usage_7day_trend">最近 7 天趋势</string>
+    <string name="usage_no_data">暂无数据</string>
+    <string name="usage_efficiency">效率指标</string>
+    <string name="usage_avg_tokens_per_chat">平均每次对话 Token</string>
+    <string name="usage_avg_words_per_reply">平均每次回复字数</string>
+    <string name="usage_cache_hit_rate">缓存命中率</string>
+    <string name="usage_by_model">按模型统计</string>
+    <string name="usage_no_model_data">暂无数据（请给 AI 消息设置模型名称）</string>
+    <string name="usage_replies_count">%d 条回复</string>
+    <string name="usage_total_token_label">总 Token</string>
+    <string name="usage_input_label">输入</string>
+    <string name="usage_output_label">输出</string>
+    <string name="usage_unknown_model">未知模型</string>
+    <string name="legend_input">输入</string>
+    <string name="legend_output">输出</string>
+
+    <!-- Misc -->
+    <string name="copy_error">复制错误</string>
+    <string name="upload_image">上传图片</string>
+    <string name="upload_file">上传文件</string>
+    <string name="please_attach_image_for_ocr">请为 OCR 模型附加一张图片</string>
+
+    <!-- Sync Screen -->
+    <string name="sync_title">局域网同步</string>
+    <string name="sync_connecting">正在连接…</string>
+    <string name="sync_choose_role">选择同步角色</string>
+    <string name="sync_same_wifi">确保两台设备在同一 WiFi 网络下</string>
+    <string name="sync_send_data">发送数据</string>
+    <string name="sync_send_desc">将本机数据分享给另一台设备</string>
+    <string name="sync_receive_data">接收数据</string>
+    <string name="sync_receive_desc">从另一台设备接收数据</string>
+    <string name="sync_choose_data">选择要分享的数据</string>
+    <string name="sync_chat_records">聊天记录</string>
+    <string name="sync_start">开始同步</string>
+    <string name="sync_waiting">等待对方连接…</string>
+    <string name="sync_local_ip">本机 IP: %1$s:%2$d</string>
+    <string name="sync_sharing_label">正在分享: </string>
+    <string name="sync_security_verify">安全验证</string>
+    <string name="sync_device_label">设备: %s</string>
+    <string name="sync_confirm_code">请确认两台设备显示相同的验证码：</string>
+    <string name="sync_code_match">验证码一致，确认连接</string>
+    <string name="sync_scanning">正在扫描局域网设备…</string>
+    <string name="sync_no_devices">暂未发现设备\n请确认对方已开始同步</string>
+    <string name="sync_data_summary">数据摘要</string>
+    <string name="sync_from_device">来自: %s</string>
+    <string name="sync_chat_detail">聊天记录 (%1$d 个对话, %2$d 条消息)</string>
+    <string name="sync_mode">同步模式</string>
+    <string name="sync_incremental">增量同步</string>
+    <string name="sync_incremental_desc">保留现有数据，仅添加新内容</string>
+    <string name="sync_overwrite">覆盖同步</string>
+    <string name="sync_overwrite_desc">清空现有数据，完全替换</string>
+    <string name="sync_start_receive">开始接收</string>
+    <string name="sync_complete">同步完成！</string>
+    <string name="sync_done">完成</string>
+    <string name="sync_retry">重试</string>
+    <string name="sync_refresh">刷新</string>
+
+    <!-- Plugin Manager Screen -->
+    <string name="plugin_title">提供商协议插件</string>
+    <string name="plugin_hint">从 GitHub 仓库下载协议插件，无需重新安装即可扩展模型支持。</string>
+    <string name="plugin_installed_count">已安装 (%d)</string>
+    <string name="plugin_downloadable_count">可下载 (%d)</string>
+    <string name="plugin_status_builtin">内置 · %s</string>
+    <string name="plugin_status_downloaded">已下载 · %s</string>
+    <string name="plugin_status_not_installed">未安装</string>
+    <string name="plugin_btn_download">下载</string>
+    <string name="plugin_btn_downloading">下载中…</string>
+    <string name="plugin_btn_delete">删除</string>
+    <string name="plugin_btn_redownload">重新下载</string>
+    <string name="plugin_models_supported">%d 个模型</string>
+
 </resources>

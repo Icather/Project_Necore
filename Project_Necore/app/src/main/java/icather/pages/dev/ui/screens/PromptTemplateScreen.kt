@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import icather.pages.dev.R
 import icather.pages.dev.db.PromptTemplate
 
 /**
@@ -41,10 +43,10 @@ fun PromptTemplateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Prompt 模板") },
+                title = { Text(stringResource(R.string.prompt_templates)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -55,7 +57,7 @@ fun PromptTemplateScreen(
                         editPrompt = ""
                         showEditDialog = true
                     }) {
-                        Icon(Icons.Filled.Add, contentDescription = "新建模板")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_template))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -81,13 +83,13 @@ fun PromptTemplateScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "暂无模板",
+                        stringResource(R.string.empty_templates),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "点击右上角 + 创建第一个模板",
+                        stringResource(R.string.empty_templates_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     )
@@ -108,7 +110,7 @@ fun PromptTemplateScreen(
                 if (builtIn.isNotEmpty()) {
                     item {
                         Text(
-                            "内置模板",
+                            stringResource(R.string.built_in_templates),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 4.dp)
@@ -128,7 +130,7 @@ fun PromptTemplateScreen(
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "自定义模板",
+                            stringResource(R.string.custom_templates),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 4.dp)
@@ -156,21 +158,21 @@ fun PromptTemplateScreen(
         if (showEditDialog) {
             AlertDialog(
                 onDismissRequest = { showEditDialog = false },
-                title = { Text(if (editingTemplate == null) "新建模板" else "编辑模板") },
+                title = { Text(if (editingTemplate == null) stringResource(R.string.new_template) else stringResource(R.string.edit_template)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = editIcon,
                                 onValueChange = { if (it.length <= 2) editIcon = it },
-                                label = { Text("图标") },
+                                label = { Text(stringResource(R.string.label_icon)) },
                                 modifier = Modifier.width(72.dp),
                                 singleLine = true
                             )
                             OutlinedTextField(
                                 value = editName,
                                 onValueChange = { editName = it },
-                                label = { Text("名称") },
+                                label = { Text(stringResource(R.string.label_name)) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true
                             )
@@ -201,10 +203,10 @@ fun PromptTemplateScreen(
                             showEditDialog = false
                         },
                         enabled = editName.isNotBlank() && editPrompt.isNotBlank()
-                    ) { Text("保存") }
+                    ) { Text(stringResource(R.string.save)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showEditDialog = false }) { Text("取消") }
+                    TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }
@@ -256,12 +258,12 @@ private fun TemplateCard(
                 Column {
                     if (onEdit != null) {
                         IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Filled.Edit, contentDescription = "编辑", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.label_edit), modifier = Modifier.size(16.dp))
                         }
                     }
                     if (onDelete != null) {
                         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Filled.Delete, contentDescription = "删除", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.delete), modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }

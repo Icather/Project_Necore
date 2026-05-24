@@ -116,7 +116,7 @@ fun SettingsScreen(
                 // 第一组：模型与服务
                 // ═══════════════════════════════════════
                 item {
-                    SettingsGroup(title = "模型与服务") {
+                    SettingsGroup(title = stringResource(R.string.group_model_service)) {
                         SettingsNavItem(
                             icon = Icons.Filled.Settings,
                             title = stringResource(id = R.string.api_configuration),
@@ -125,13 +125,13 @@ fun SettingsScreen(
                         GroupDivider()
                         SettingsNavItem(
                             icon = Icons.Filled.Extension,
-                            title = "提供商协议插件",
+                            title = stringResource(R.string.settings_protocol_plugins),
                             onClick = onNavigateToPlugins
                         )
                         GroupDivider()
                         SettingsNavItem(
                             icon = Icons.Filled.AutoFixHigh,
-                            title = "Prompt 模板",
+                            title = stringResource(R.string.settings_prompt_templates),
                             onClick = onNavigateToTemplates
                         )
                     }
@@ -141,25 +141,25 @@ fun SettingsScreen(
                 // 第二组：对话体验
                 // ═══════════════════════════════════════
                 item {
-                    SettingsGroup(title = "对话体验") {
+                    SettingsGroup(title = stringResource(R.string.group_chat_experience)) {
                         SettingsToggleItem(
                             icon = Icons.Filled.Image,
-                            title = "图片自动压缩",
+                            title = stringResource(R.string.settings_image_compress),
                             subtitle = if (uiState.isImageCompressionEnabled)
-                                "已开启 · 自动压缩至安全分辨率"
+                                stringResource(R.string.settings_image_compress_on)
                             else
-                                "已关闭 · 限制总大小 20MB",
+                                stringResource(R.string.settings_image_compress_off),
                             checked = uiState.isImageCompressionEnabled,
                             onCheckedChange = { viewModel.setImageCompressionEnabled(it) }
                         )
                         GroupDivider()
                         SettingsToggleItem(
                             icon = Icons.Filled.SwapHoriz,
-                            title = "模型自动降级",
+                            title = stringResource(R.string.settings_model_fallback),
                             subtitle = if (uiState.isFallbackEnabled)
-                                "已开启 · 主模型失败自动切换备选"
+                                stringResource(R.string.settings_model_fallback_on)
                             else
-                                "已关闭 · 仅使用当前模型",
+                                stringResource(R.string.settings_model_fallback_off),
                             checked = uiState.isFallbackEnabled,
                             onCheckedChange = { viewModel.setFallbackEnabled(it) }
                         )
@@ -170,15 +170,15 @@ fun SettingsScreen(
                 // 第三组：灵魂引擎
                 // ═══════════════════════════════════════
                 item {
-                    SettingsGroup(title = "灵魂引擎") {
+                    SettingsGroup(title = stringResource(R.string.group_soul_engine)) {
                         // AI 人设系统主开关
                         SettingsToggleItem(
                             icon = Icons.Filled.Person,
-                            title = "AI 人设系统",
+                            title = stringResource(R.string.settings_identity),
                             subtitle = if (uiState.isIdentityEnabled)
-                                "已开启 · 可切换不同AI人格"
+                                stringResource(R.string.settings_identity_on)
                             else
-                                "已关闭 · 使用默认行为",
+                                stringResource(R.string.settings_identity_off),
                             checked = uiState.isIdentityEnabled,
                             onCheckedChange = { viewModel.setIdentityEnabled(it) }
                         )
@@ -192,7 +192,7 @@ fun SettingsScreen(
                                 GroupDivider(indented = true)
                                 SettingsNavItem(
                                     icon = Icons.Filled.ManageAccounts,
-                                    title = "管理 AI 人设",
+                                    title = stringResource(R.string.settings_manage_identity),
                                     onClick = onNavigateToIdentity,
                                     indented = true
                                 )
@@ -202,11 +202,11 @@ fun SettingsScreen(
                         // 长期记忆
                         SettingsToggleItem(
                             icon = Icons.Filled.Psychology,
-                            title = "长期记忆",
+                            title = stringResource(R.string.settings_memory),
                             subtitle = if (uiState.isMemoryEnabled)
-                                "已开启 · AI会记住你的偏好"
+                                stringResource(R.string.settings_memory_on)
                             else
-                                "已关闭 · 每次对话独立",
+                                stringResource(R.string.settings_memory_off),
                             checked = uiState.isMemoryEnabled,
                             onCheckedChange = { viewModel.setMemoryEnabled(it) }
                         )
@@ -214,11 +214,11 @@ fun SettingsScreen(
                         // 情绪感知
                         SettingsToggleItem(
                             icon = Icons.Filled.Favorite,
-                            title = "情绪感知",
+                            title = stringResource(R.string.settings_emotion),
                             subtitle = if (uiState.isEmotionEnabled)
-                                "已开启 · AI会表达情绪变化"
+                                stringResource(R.string.settings_emotion_on)
                             else
-                                "已关闭 · 纯理性模式",
+                                stringResource(R.string.settings_emotion_off),
                             checked = uiState.isEmotionEnabled,
                             onCheckedChange = { viewModel.setEmotionEnabled(it) }
                         )
@@ -229,16 +229,16 @@ fun SettingsScreen(
                 // 第四组：数据管理
                 // ═══════════════════════════════════════
                 item {
-                    SettingsGroup(title = "数据管理") {
+                    SettingsGroup(title = stringResource(R.string.group_data_management)) {
                         SettingsNavItem(
                             icon = Icons.Filled.BarChart,
-                            title = "用量统计",
+                            title = stringResource(R.string.settings_usage_stats),
                             onClick = onNavigateToUsage
                         )
                         GroupDivider()
                         SettingsNavItem(
                             icon = Icons.Filled.SyncAlt,
-                            title = "局域网同步",
+                            title = stringResource(R.string.settings_lan_sync),
                             onClick = onNavigateToSync
                         )
                         GroupDivider()
@@ -272,7 +272,7 @@ fun SettingsScreen(
                 // 第五组：通用
                 // ═══════════════════════════════════════
                 item {
-                    SettingsGroup(title = "通用") {
+                    SettingsGroup(title = stringResource(R.string.group_general)) {
                         SettingsNavItem(
                             icon = Icons.Filled.Language,
                             title = stringResource(id = R.string.language),

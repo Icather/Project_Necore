@@ -25,6 +25,8 @@ import icather.pages.dev.db.DailyTokenStat
 import icather.pages.dev.db.ModelUsageStat
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.res.stringResource
+import icather.pages.dev.R
 
 /**
  * F4: API 用量统计数据模型
@@ -53,10 +55,10 @@ fun UsageScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("用量统计") },
+                title = { Text(stringResource(R.string.usage_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -77,7 +79,7 @@ fun UsageScreen(
             // 总览卡片
             item {
                 Text(
-                    "总览",
+                    stringResource(R.string.usage_overview),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -91,14 +93,14 @@ fun UsageScreen(
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Filled.Token,
-                        label = "总 Token",
+                        label = stringResource(R.string.usage_total_tokens),
                         value = formatLargeNumber(totalTokens),
                         color = MaterialTheme.colorScheme.primary
                     )
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Filled.Chat,
-                        label = "对话数",
+                        label = stringResource(R.string.usage_conversations),
                         value = stats.totalConversations.toString(),
                         color = MaterialTheme.colorScheme.tertiary
                     )
@@ -112,14 +114,14 @@ fun UsageScreen(
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Filled.Input,
-                        label = "输入 Token",
+                        label = stringResource(R.string.usage_input_tokens),
                         value = formatLargeNumber(stats.totalInputTokens),
                         color = Color(0xFF4CAF50)
                     )
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Filled.Output,
-                        label = "输出 Token",
+                        label = stringResource(R.string.usage_output_tokens),
                         value = formatLargeNumber(stats.totalOutputTokens),
                         color = Color(0xFFFF9800)
                     )
@@ -133,14 +135,14 @@ fun UsageScreen(
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Filled.Cached,
-                        label = "缓存命中",
+                        label = stringResource(R.string.usage_cache_hits),
                         value = formatLargeNumber(stats.totalCacheHitTokens),
                         color = Color(0xFF9C27B0)
                     )
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Filled.SmartToy,
-                        label = "AI 回复数",
+                        label = stringResource(R.string.usage_ai_replies),
                         value = stats.totalAiMessages.toString(),
                         color = Color(0xFF2196F3)
                     )
@@ -151,7 +153,7 @@ fun UsageScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "最近 7 天趋势",
+                    stringResource(R.string.usage_7day_trend),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -165,7 +167,7 @@ fun UsageScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ) {
                         Text(
-                            "暂无数据",
+                            stringResource(R.string.usage_no_data),
                             modifier = Modifier.padding(32.dp),
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
@@ -186,7 +188,7 @@ fun UsageScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "效率指标",
+                    stringResource(R.string.usage_efficiency),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -203,11 +205,11 @@ fun UsageScreen(
                         val avgOutputPerMsg = if (stats.totalAiMessages > 0) stats.totalOutputTokens / stats.totalAiMessages else 0L
                         val cacheRate = if (stats.totalInputTokens > 0) (stats.totalCacheHitTokens * 100.0 / stats.totalInputTokens) else 0.0
 
-                        MetricRow("平均每次对话 Token", formatLargeNumber(avgTokenPerMsg))
+                        MetricRow(stringResource(R.string.usage_avg_tokens_per_chat), formatLargeNumber(avgTokenPerMsg))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        MetricRow("平均每次回复字数", formatLargeNumber(avgOutputPerMsg))
+                        MetricRow(stringResource(R.string.usage_avg_words_per_reply), formatLargeNumber(avgOutputPerMsg))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        MetricRow("缓存命中率", String.format("%.1f%%", cacheRate))
+                        MetricRow(stringResource(R.string.usage_cache_hit_rate), String.format("%.1f%%", cacheRate))
                     }
                 }
             }
@@ -216,7 +218,7 @@ fun UsageScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "按模型统计",
+                    stringResource(R.string.usage_by_model),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -230,7 +232,7 @@ fun UsageScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     ) {
                         Text(
-                            "暂无数据（请给 AI 消息设置模型名称）",
+                            stringResource(R.string.usage_no_model_data),
                             modifier = Modifier.padding(32.dp),
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
@@ -332,8 +334,8 @@ private fun TokenTrendChart(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
-                LegendDot(color = inputColor, label = "输入")
-                LegendDot(color = outputColor, label = "输出")
+                LegendDot(color = inputColor, label = stringResource(R.string.legend_input))
+                LegendDot(color = outputColor, label = stringResource(R.string.legend_output))
             }
 
             // 折线图
@@ -425,7 +427,7 @@ private fun formatLargeNumber(value: Long): String {
 /** F5: 单个模型的用量卡片 */
 @Composable
 private fun ModelUsageCard(stat: ModelUsageStat) {
-    val modelName = stat.modelName ?: "未知模型"
+    val modelName = stat.modelName ?: stringResource(R.string.usage_unknown_model)
     val totalModelTokens = stat.totalInput + stat.totalOutput
     val cacheRate = if (stat.totalInput > 0) (stat.totalCacheHit * 100.0 / stat.totalInput) else 0.0
 
@@ -448,7 +450,7 @@ private fun ModelUsageCard(stat: ModelUsageStat) {
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "${stat.messageCount} 条回复",
+                    text = stringResource(R.string.usage_replies_count, stat.messageCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -469,7 +471,7 @@ private fun ModelUsageCard(stat: ModelUsageStat) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "总Token",
+                        text = stringResource(R.string.usage_total_token_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -482,7 +484,7 @@ private fun ModelUsageCard(stat: ModelUsageStat) {
                         color = Color(0xFF4CAF50)
                     )
                     Text(
-                        text = "输入",
+                        text = stringResource(R.string.usage_input_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -495,7 +497,7 @@ private fun ModelUsageCard(stat: ModelUsageStat) {
                         color = Color(0xFFFF9800)
                     )
                     Text(
-                        text = "输出",
+                        text = stringResource(R.string.usage_output_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -508,7 +510,7 @@ private fun ModelUsageCard(stat: ModelUsageStat) {
                         color = Color(0xFF9C27B0)
                     )
                     Text(
-                        text = "缓存命中率",
+                        text = stringResource(R.string.usage_cache_hit_rate),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

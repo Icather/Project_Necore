@@ -6,6 +6,7 @@ import icather.pages.dev.api.ApiService
 import icather.pages.dev.api.DeepSeekOcrApiService
 import icather.pages.dev.api.SiliconFlowApiService
 import java.io.File
+import java.util.Locale
 import java.io.InputStreamReader
 
 object ProtocolRegistry {
@@ -126,7 +127,7 @@ object ProtocolRegistry {
         return pluginConfigs[providerName] ?: ProtocolPluginJson(
             providerInfo = ProviderInfo(
                 id = providerName,
-                displayName = "[协议丢失] $providerName",
+                displayName = "[Protocol Missing] $providerName",
                 baseUrl = "",
                 isOpenAiCompatible = false
             ),
@@ -188,8 +189,8 @@ object ProtocolRegistry {
             .groupBy { it.providerInfo!!.baseUrl }
 
         return grouped.map { (baseUrl, plugins) ->
-            // 提供商展示名：域名映射优先（最可靠），括号提取回退
-            val providerDisplayName = deriveProviderName(baseUrl, plugins.first())
+            // 提供商展示名：从插件的 provider_display_names 多语言字段读取
+            val providerDisplayName = getLocalizedProviderName(plugins.first())
 
             // 收集所有模型
             val models = mutableListOf<String>()
@@ -225,31 +226,18 @@ object ProtocolRegistry {
     }
 
     /**
-     * 从 base_url 域名推导提供商展示名称。
-     * 域名映射最可靠，不依赖 display_name 中括号内容的一致性。
+     * 从插件的 provider_display_names 多语言字段中获取当前 Locale 对应的提供商名称。
+     * 回退链：当前语种 → "en" → display_name
      */
-    private fun deriveProviderName(baseUrl: String, fallbackPlugin: ProtocolPluginJson): String {
-        // 域名 → 提供商名称映射（覆盖所有当前已适配提供商）
-        val domainMap = mapOf(
-            "deepseek.com" to "DeepSeek",
-            "openai.com" to "OpenAI",
-            "anthropic.com" to "Anthropic",
-            "dashscope.aliyuncs.com" to "阿里云百炼",
-            "siliconflow.cn" to "硅基流动",
-            "volces.com" to "火山引擎",
-            "bce.baidu.com" to "百度千帆",
-            "googleapis.com" to "Google"
-        )
-
-        // 优先域名匹配
-        domainMap.forEach { (domain, name) ->
-            if (baseUrl.contains(domain)) return name
+    private fun getLocalizedProviderName(plugin: ProtocolPluginJson): String {
+        val names = plugin.providerInfo?.providerDisplayNames
+        if (names != null) {
+            val lang = Locale.getDefault().language  // "zh", "ja", "ru", "es", "pt", "en"...
+            names[lang]?.let { return it }
+            names["en"]?.let { return it }
         }
-
-        // 回退：从 display_name 的括号中提取
-        val rawName = fallbackPlugin.providerInfo?.displayName ?: return baseUrl
-        return Regex("\\((.+?)\\)").find(rawName)?.groupValues?.get(1)
-            ?: rawName
+        // 最终回退：display_name 原始值
+        return plugin.providerInfo?.displayName ?: plugin.providerInfo?.id ?: "Unknown"
     }
 }
 

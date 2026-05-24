@@ -2,6 +2,14 @@
   "provider_info": {
     "id": "glm-5.1",
     "display_name": "GLM-5.1 智谱 (百炼)",
+    "provider_display_names": {
+      "en": "Alibaba Cloud Bailian",
+      "zh": "阿里云百炼",
+      "ja": "アリババクラウド百錬",
+      "ru": "Alibaba Cloud Bailian",
+      "es": "Alibaba Cloud Bailian",
+      "pt": "Alibaba Cloud Bailian"
+    },
     "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     "is_openai_compatible": true,
     "available_models": [

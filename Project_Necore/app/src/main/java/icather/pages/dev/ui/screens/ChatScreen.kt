@@ -34,7 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import icather.pages.dev.ChatMessage
+import icather.pages.dev.R
 import icather.pages.dev.chat.ChatViewModel
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,7 +143,7 @@ fun ChatScreen(
                 },
                 actions = {
                     IconButton(onClick = { viewModel.toggleBranchPanel(true) }) {
-                        Icon(Icons.Filled.AccountTree, contentDescription = "打开分支")
+                        Icon(Icons.Filled.AccountTree, contentDescription = stringResource(R.string.open_branches))
                     }
                     IconButton(onClick = { viewModel.startNewChat() }) {
                         Icon(Icons.Filled.AddCircleOutline, contentDescription = "New Chat")
@@ -257,7 +259,7 @@ fun ChatScreen(
                         textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                         decorationBox = { innerTextField ->
                             if (inputText.isEmpty()) {
-                                Text("发消息或按住说话", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), style = MaterialTheme.typography.bodyLarge)
+                                Text(stringResource(R.string.msg_or_hold_to_speak), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), style = MaterialTheme.typography.bodyLarge)
                             }
                             innerTextField()
                         },
@@ -277,8 +279,8 @@ fun ChatScreen(
                         providerGroups.filter { group -> group.pluginIds.any { it in configuredProviders } }
                     }
                     val availableModels = activeProviderGroup?.availableModels ?: emptyList()
-                    val providerDisplayName = activeProviderGroup?.displayName ?: uiState.activeApiConfig?.provider ?: "提供商"
-                    val currentModelName = uiState.activeApiConfig?.modelName ?: "模型"
+                    val providerDisplayName = activeProviderGroup?.displayName ?: uiState.activeApiConfig?.provider ?: stringResource(R.string.label_provider_default)
+                    val currentModelName = uiState.activeApiConfig?.modelName ?: stringResource(R.string.label_model_default)
 
                     // Row 1: Feature toggles
                     Row(
@@ -296,7 +298,7 @@ fun ChatScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp)) {
                                     Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("深度思考", style = MaterialTheme.typography.labelMedium, color = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.deep_thinking), style = MaterialTheme.typography.labelMedium, color = if (isThinking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -335,7 +337,7 @@ fun ChatScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        "联网搜索",
+                                        stringResource(R.string.web_search),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = when {
                                             !webSearchSupported -> disabledColor
@@ -533,7 +535,7 @@ fun ChatMessageItem(
                     if (viewModel != null && !message.isStreaming) {
                         Icon(
                             Icons.Filled.Edit,
-                            contentDescription = "编辑",
+                            contentDescription = stringResource(R.string.label_edit),
                             modifier = Modifier
                                 .size(28.dp)
                                 .padding(top = 8.dp, end = 8.dp)
@@ -558,7 +560,7 @@ fun ChatMessageItem(
                     val canGoRight = message.siblingIndex < message.siblingCount - 1
                     Icon(
                         Icons.Filled.ChevronLeft,
-                        contentDescription = "上一个版本",
+                        contentDescription = stringResource(R.string.previous_version),
                         modifier = Modifier
                             .size(18.dp)
                             .then(if (canGoLeft) Modifier.clickable { viewModel.switchBranch(index, -1) } else Modifier),
@@ -572,7 +574,7 @@ fun ChatMessageItem(
                     )
                     Icon(
                         Icons.Filled.ChevronRight,
-                        contentDescription = "下一个版本",
+                        contentDescription = stringResource(R.string.next_version),
                         modifier = Modifier
                             .size(18.dp)
                             .then(if (canGoRight) Modifier.clickable { viewModel.switchBranch(index, 1) } else Modifier),
@@ -586,7 +588,7 @@ fun ChatMessageItem(
         if (showEditDialog) {
             AlertDialog(
                 onDismissRequest = { showEditDialog = false },
-                title = { Text("编辑消息") },
+                title = { Text(stringResource(R.string.edit_message_title)) },
                 text = {
                     OutlinedTextField(
                         value = editText,
@@ -603,10 +605,10 @@ fun ChatMessageItem(
                             viewModel?.editAndResend(index, editText.trim())
                         },
                         enabled = editText.isNotBlank()
-                    ) { Text("重新发送") }
+                    ) { Text(stringResource(R.string.btn_resend)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showEditDialog = false }) { Text("取消") }
+                    TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.cancel)) }
                 }
             )
         }
@@ -640,7 +642,7 @@ fun ChatMessageItem(
                                 Icon(Icons.Filled.Psychology, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    if (message.isStreaming) "思考中..." else "思考过程",
+                                    if (message.isStreaming) stringResource(R.string.thinking_in_progress) else stringResource(R.string.thinking_process),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     modifier = Modifier.weight(1f)
@@ -695,8 +697,8 @@ fun ChatMessageItem(
                         }
                     }
                     
-                    val inputStr = message.inputTokens?.let { "上下文 ${formatTokens(it)}" } ?: ""
-                    val outputStr = message.outputTokens?.let { "输出 ${formatTokens(it)}" } ?: ""
+                    val inputStr = message.inputTokens?.let { stringResource(R.string.token_context, formatTokens(it)) } ?: ""
+                    val outputStr = message.outputTokens?.let { stringResource(R.string.token_output, formatTokens(it)) } ?: ""
                     val separator = if (inputStr.isNotEmpty() && outputStr.isNotEmpty()) " · " else ""
                     
                     val billing = protocol?.billingMetadata
@@ -727,7 +729,7 @@ fun ChatMessageItem(
                         // 复制按钮
                         MessageActionButton(
                             icon = Icons.Filled.ContentCopy,
-                            label = "复制",
+                            label = stringResource(R.string.label_copy),
                             onClick = {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 // 剥离 HTML 标签，只复制纯文本
@@ -736,13 +738,13 @@ fun ChatMessageItem(
                                     .replace("&lt;", "<").replace("&gt;", ">")
                                     .replace("&amp;", "&")
                                 clipboard.setPrimaryClip(ClipData.newPlainText("AI Response", plainText))
-                                Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
                             }
                         )
                         // 分享按钮
                         MessageActionButton(
                             icon = Icons.Filled.Share,
-                            label = "分享",
+                            label = stringResource(R.string.label_share),
                             onClick = {
                                 val plainText = message.text
                                     .replace(Regex("<[^>]*>"), "")
@@ -752,14 +754,14 @@ fun ChatMessageItem(
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, plainText)
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, "分享回复"))
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.label_share_reply)))
                             }
                         )
                         // E1: 重新生成按钮（仅最后一条 AI 消息）
                         if (isLastAiMessage && viewModel != null) {
                             MessageActionButton(
                                 icon = Icons.Filled.Refresh,
-                                label = "重新生成",
+                                label = stringResource(R.string.label_regenerate),
                                 onClick = { viewModel.regenerateLastResponse() }
                             )
                         }
@@ -855,7 +857,7 @@ fun HistoryDrawerContent(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchChanged,
-                placeholder = { Text("搜索聊天内容...", style = MaterialTheme.typography.bodyMedium) },
+                placeholder = { Text(stringResource(R.string.search_chats), style = MaterialTheme.typography.bodyMedium) },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -869,7 +871,15 @@ fun HistoryDrawerContent(
             )
 
             // 对话列表（按时间分组）
-            val grouped = remember(conversations) { groupConversationsByTime(conversations) }
+            val labelPinned = stringResource(R.string.group_pinned)
+            val labelToday = stringResource(R.string.group_today)
+            val labelYesterday = stringResource(R.string.group_yesterday)
+            val labelWeek = stringResource(R.string.group_week)
+            val labelMonth = stringResource(R.string.group_month)
+            val labelOlder = stringResource(R.string.group_older)
+            val grouped = remember(conversations, labelPinned, labelToday, labelYesterday, labelWeek, labelMonth, labelOlder) {
+                groupConversationsByTime(conversations, labelPinned, labelToday, labelYesterday, labelWeek, labelMonth, labelOlder)
+            }
 
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -907,8 +917,8 @@ fun HistoryDrawerContent(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                DrawerBottomButton(Icons.Filled.Settings, "设置", onNavigateToSettings)
-                DrawerBottomButton(Icons.Filled.BarChart, "用量", onNavigateToUsage)
+                DrawerBottomButton(Icons.Filled.Settings, stringResource(R.string.drawer_settings), onNavigateToSettings)
+                DrawerBottomButton(Icons.Filled.BarChart, stringResource(R.string.drawer_usage), onNavigateToUsage)
                 DrawerBottomButton(Icons.Filled.Key, "API", onNavigateToApiConfig)
             }
         }
@@ -995,31 +1005,31 @@ private fun ConversationDrawerItem(
 
         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
             DropdownMenuItem(
-                text = { Text(if (conversation.isPinned) "取消置顶" else "置顶") },
+                text = { Text(if (conversation.isPinned) stringResource(R.string.menu_unpin) else stringResource(R.string.menu_pin)) },
                 leadingIcon = { Icon(Icons.Filled.PushPin, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 onClick = { onTogglePin(); showMenu = false }
             )
             DropdownMenuItem(
-                text = { Text("重命名") },
+                text = { Text(stringResource(R.string.menu_rename)) },
                 leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 onClick = { renameText = conversation.title; showRenameDialog = true; showMenu = false }
             )
             // 延伸此对话
             DropdownMenuItem(
-                text = { Text("延伸此对话") },
+                text = { Text(stringResource(R.string.menu_continue_chat)) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.CallSplit, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 onClick = { onContinue(); showMenu = false }
             )
             // 挂载到当前对话（仅当有活跃对话且不是自身时显示）
             if (currentConversationId != null && currentConversationId != conversation.id) {
                 DropdownMenuItem(
-                    text = { Text("挂载到当前对话") },
+                    text = { Text(stringResource(R.string.menu_mount_to_current)) },
                     leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     onClick = { onMount(); showMenu = false }
                 )
             }
             DropdownMenuItem(
-                text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                text = { Text(stringResource(R.string.menu_delete), color = MaterialTheme.colorScheme.error) },
                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error) },
                 onClick = { onDelete(); showMenu = false }
             )
@@ -1029,18 +1039,26 @@ private fun ConversationDrawerItem(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("重命名对话") },
+            title = { Text(stringResource(R.string.rename_dialog_title)) },
             text = {
                 OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, modifier = Modifier.fillMaxWidth())
             },
-            confirmButton = { TextButton(onClick = { onRename(renameText); showRenameDialog = false }) { Text("确定") } },
-            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text("取消") } }
+            confirmButton = { TextButton(onClick = { onRename(renameText); showRenameDialog = false }) { Text(stringResource(R.string.confirm)) } },
+            dismissButton = { TextButton(onClick = { showRenameDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
 
 /** H1: 对话按时间分组 */
-private fun groupConversationsByTime(conversations: List<icather.pages.dev.db.Conversation>): List<Pair<String, List<icather.pages.dev.db.Conversation>>> {
+private fun groupConversationsByTime(
+    conversations: List<icather.pages.dev.db.Conversation>,
+    labelPinned: String,
+    labelToday: String,
+    labelYesterday: String,
+    labelWeek: String,
+    labelMonth: String,
+    labelOlder: String
+): List<Pair<String, List<icather.pages.dev.db.Conversation>>> {
     val calendar = java.util.Calendar.getInstance()
     calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
     calendar.set(java.util.Calendar.MINUTE, 0)
@@ -1055,7 +1073,7 @@ private fun groupConversationsByTime(conversations: List<icather.pages.dev.db.Co
     val unpinned = conversations.filter { !it.isPinned }
 
     val result = mutableListOf<Pair<String, List<icather.pages.dev.db.Conversation>>>()
-    if (pinned.isNotEmpty()) result.add("置顶" to pinned)
+    if (pinned.isNotEmpty()) result.add(labelPinned to pinned)
 
     val today = unpinned.filter { it.startTime >= todayStart }
     val yesterday = unpinned.filter { it.startTime in yesterdayStart until todayStart }
@@ -1063,11 +1081,11 @@ private fun groupConversationsByTime(conversations: List<icather.pages.dev.db.Co
     val month = unpinned.filter { it.startTime in monthStart until weekStart }
     val older = unpinned.filter { it.startTime < monthStart }
 
-    if (today.isNotEmpty()) result.add("今天" to today)
-    if (yesterday.isNotEmpty()) result.add("昨天" to yesterday)
-    if (week.isNotEmpty()) result.add("7 天内" to week)
-    if (month.isNotEmpty()) result.add("30 天内" to month)
-    if (older.isNotEmpty()) result.add("更早" to older)
+    if (today.isNotEmpty()) result.add(labelToday to today)
+    if (yesterday.isNotEmpty()) result.add(labelYesterday to yesterday)
+    if (week.isNotEmpty()) result.add(labelWeek to week)
+    if (month.isNotEmpty()) result.add(labelMonth to month)
+    if (older.isNotEmpty()) result.add(labelOlder to older)
 
     return result
 }
@@ -1104,12 +1122,12 @@ fun BranchHistoryBottomSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "分支对话历史",
+                        text = stringResource(R.string.branch_history),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(onClick = { viewModel.toggleBranchPanel(false) }) {
-                        Icon(Icons.Filled.Close, contentDescription = "收起")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.collapse))
                     }
                 }
                 
@@ -1123,7 +1141,7 @@ fun BranchHistoryBottomSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "暂无分支历史记录",
+                            text = stringResource(R.string.no_branch_history),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
@@ -1220,14 +1238,14 @@ fun BranchNodeItem(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "版本 ${node.currentPageIndex + 1} / ${node.totalPageCount}",
+                        text = stringResource(R.string.version_indicator, node.currentPageIndex + 1, node.totalPageCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                     
                     if (node.totalPageCount > 1) {
                         Text(
-                            text = "有 ${node.totalPageCount} 个分支",
+                            text = stringResource(R.string.branches_count, node.totalPageCount),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                         )
@@ -1291,7 +1309,7 @@ fun ContinuationBanner(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (isDeleted) "原对话已删除" else "延伸自「${parentTitle}」",
+                text = if (isDeleted) stringResource(R.string.continuation_deleted) else stringResource(R.string.continuation_banner, parentTitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (isDeleted)
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
@@ -1304,7 +1322,7 @@ fun ContinuationBanner(
             if (!isDeleted) {
                 Icon(
                     imageVector = Icons.Filled.ChevronRight,
-                    contentDescription = "跳转到原对话",
+                    contentDescription = stringResource(R.string.jump_to_original),
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                 )

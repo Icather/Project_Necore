@@ -20,6 +20,7 @@ data class ProtocolPluginJson(
 data class ProviderInfo(
     val id: String,
     @SerializedName("display_name") val displayName: String,
+    @SerializedName("provider_display_names") val providerDisplayNames: Map<String, String>? = null,
     @SerializedName("base_url") val baseUrl: String,
     @SerializedName("is_openai_compatible") val isOpenAiCompatible: Boolean,
     @SerializedName("available_models") val availableModels: List<String>? = null

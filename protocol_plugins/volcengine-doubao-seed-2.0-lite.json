@@ -2,6 +2,14 @@
   "provider_info": {
     "id": "doubao-seed-2-0-lite-260215",
     "display_name": "豆包 Doubao Seed 2.0 Lite (火山引擎)",
+    "provider_display_names": {
+      "en": "Volcengine",
+      "zh": "火山引擎",
+      "ja": "Volcengine",
+      "ru": "Volcengine",
+      "es": "Volcengine",
+      "pt": "Volcengine"
+    },
     "base_url": "https://ark.cn-beijing.volces.com/api/v3",
     "is_openai_compatible": true,
     "available_models": ["doubao-seed-2-0-lite-260215", "doubao-1.5-pro-256k", "doubao-1.5-pro-32k", "doubao-1.5-lite-32k"]
