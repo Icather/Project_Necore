@@ -94,13 +94,17 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showLanguageSelectionDialog() {
-        val languages = arrayOf("English", "中文")
+        val languages = arrayOf("简体中文", "English", "Русский", "日本語", "Español", "Português")
         AlertDialog.Builder(this)
             .setTitle(R.string.language)
             .setItems(languages) { _, which ->
                 val locale = when (which) {
-                    0 -> "en"
-                    1 -> "zh-CN"
+                    0 -> "zh-CN"
+                    1 -> "en"
+                    2 -> "ru"
+                    3 -> "ja"
+                    4 -> "es"
+                    5 -> "pt-BR"
                     else -> "en"
                 }
                 val appLocale = LocaleListCompat.forLanguageTags(locale)

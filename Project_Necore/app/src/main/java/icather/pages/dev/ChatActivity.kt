@@ -44,6 +44,11 @@ class ChatActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         installSplashScreen()
 
+        val settingsRepo = icather.pages.dev.repository.SettingsRepository(this, AppDatabase.getInstance(this))
+        if (!settingsRepo.hasSelectedLanguage()) {
+            showInitialLanguageSelectionDialog(settingsRepo)
+        }
+
         val conversationId = intent.getLongExtra("CONVERSATION_ID", -1)
         if (conversationId != -1L) {
             viewModel.loadConversation(conversationId)
@@ -111,5 +116,27 @@ class ChatActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    private fun showInitialLanguageSelectionDialog(settingsRepo: icather.pages.dev.repository.SettingsRepository) {
+        val languages = arrayOf("简体中文", "English", "Русский", "日本語", "Español", "Português")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.language)
+            .setCancelable(false) // 强制必须选择
+            .setItems(languages) { _, which ->
+                val locale = when (which) {
+                    0 -> "zh-CN"
+                    1 -> "en"
+                    2 -> "ru"
+                    3 -> "ja"
+                    4 -> "es"
+                    5 -> "pt-BR"
+                    else -> "en"
+                }
+                val appLocale = androidx.core.os.LocaleListCompat.forLanguageTags(locale)
+                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(appLocale)
+                settingsRepo.setLanguageSelected()
+            }
+            .show()
     }
 }

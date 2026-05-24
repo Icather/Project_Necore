@@ -29,6 +29,7 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
         private const val KEY_MEMORY_ENABLED = "memory_enabled"
         private const val KEY_EMOTION_ENABLED = "emotion_enabled"
         private const val KEY_FALLBACK_ENABLED = "fallback_enabled"
+        private const val KEY_LANGUAGE_SELECTED = "language_selected"
     }
 
     fun getAllApiConfigs() = db.apiConfigDao().getAll()
@@ -56,6 +57,10 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
     // G2: 模型 Fallback 链开关（默认关闭）
     fun isFallbackEnabled(): Boolean = prefs.getBoolean(KEY_FALLBACK_ENABLED, false)
     fun setFallbackEnabled(enabled: Boolean) { prefs.edit().putBoolean(KEY_FALLBACK_ENABLED, enabled).apply() }
+
+    // 首次启动语言选择
+    fun hasSelectedLanguage(): Boolean = prefs.getBoolean(KEY_LANGUAGE_SELECTED, false)
+    fun setLanguageSelected() { prefs.edit().putBoolean(KEY_LANGUAGE_SELECTED, true).apply() }
 
     val activeApiConfigId: kotlinx.coroutines.flow.Flow<Long> = kotlinx.coroutines.flow.flow {
         while (true) {
