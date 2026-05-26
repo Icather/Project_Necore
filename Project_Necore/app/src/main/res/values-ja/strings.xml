@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">Necore</string>
     <string name="save">保存</string>
     <string name="cancel">キャンセル</string>
@@ -138,8 +138,8 @@
     <string name="language">言語</string>
     <string name="about">アプリについて</string>
 
-    <string name="export_api_configs">API設定をエクスポート</string>
-    <string name="import_api_configs">API設定をインポート</string>
+    <string name="export_api_configs">設定とAPIをエクスポート</string>
+    <string name="import_api_configs">設定とAPIをインポート</string>
     <string name="export_chat_history">チャット履歴をエクスポート</string>
     <string name="import_chat_history">チャット履歴をインポート</string>
     <string name="export_all">すべてエクスポート</string>
@@ -271,4 +271,9 @@
     <string name="plugin_btn_redownload">再ダウンロード</string>
     <string name="plugin_models_supported">%d モデル</string>
 
+
+    <string name="search_conversations">会話を検索…</string>
+    <string name="no_results_found">結果が見つかりません</string>
+    <string name="no_chat_history">チャット履歴がありません</string>
 </resources>
+

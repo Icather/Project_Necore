@@ -156,8 +156,8 @@
     <string name="about">About</string>
 
     <!-- Data Management (export/import) -->
-    <string name="export_api_configs">Export API Configurations</string>
-    <string name="import_api_configs">Import API Configurations</string>
+    <string name="export_api_configs">Export Settings &amp; API</string>
+    <string name="import_api_configs">Import Settings &amp; API</string>
     <string name="export_chat_history">Export Chat History</string>
     <string name="import_chat_history">Import Chat History</string>
     <string name="export_all">Export All</string>
@@ -337,5 +337,12 @@
     <string name="plugin_btn_delete">Delete</string>
     <string name="plugin_btn_redownload">Re-download</string>
     <string name="plugin_models_supported">%d models</string>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- History Screen -->
+    <!-- ════════════════════════════════════════ -->
+    <string name="search_conversations">Search conversations…</string>
+    <string name="no_results_found">No results found</string>
+    <string name="no_chat_history">No chat history yet</string>
 
 </resources>

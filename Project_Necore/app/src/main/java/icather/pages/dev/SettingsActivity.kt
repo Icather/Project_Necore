@@ -24,12 +24,12 @@ class SettingsActivity : AppCompatActivity() {
         SettingsViewModel.Factory(SettingsRepository(this, AppDatabase.getInstance(this)))
     }
 
-    private val exportApiLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        uri?.let { viewModel.executeExportApiConfigs(it) }
+    private val exportSettingsLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let { viewModel.executeExportSettings(it) }
     }
 
-    private val importApiLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { viewModel.importApiConfigs(it) }
+    private val importSettingsLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.importSettings(it) }
     }
 
     private val exportChatHistoryLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -63,7 +63,7 @@ class SettingsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.events.collect { event ->
                 when (event) {
-                    is SettingsEvent.TriggerExportApiConfigs -> exportApiLauncher.launch(event.fileName)
+                    is SettingsEvent.TriggerExportSettings -> exportSettingsLauncher.launch(event.fileName)
                     is SettingsEvent.TriggerExportChatHistory -> exportChatHistoryLauncher.launch(event.fileName)
                     else -> {} // Toast is handled in Compose
                 }
@@ -85,7 +85,7 @@ class SettingsActivity : AppCompatActivity() {
                     onNavigateToTemplates = { startActivity(Intent(this@SettingsActivity, PromptTemplateActivity::class.java)) },
                     onNavigateToSync = { startActivity(Intent(this@SettingsActivity, SyncActivity::class.java)) },
                     onLanguageClick = { showLanguageSelectionDialog() },
-                    onImportApiClick = { importApiLauncher.launch(arrayOf("application/json")) },
+                    onImportApiClick = { importSettingsLauncher.launch(arrayOf("application/json")) },
                     onExportChatClick = { showExportChatHistoryDialog() },
                     onImportChatClick = { importChatHistoryLauncher.launch(arrayOf("application/json")) }
                 )

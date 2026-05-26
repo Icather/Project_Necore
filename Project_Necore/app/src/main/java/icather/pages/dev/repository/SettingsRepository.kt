@@ -3,8 +3,10 @@ package icather.pages.dev.repository
 import android.content.Context
 import android.net.Uri
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import icather.pages.dev.ChatHistoryBundle
+import icather.pages.dev.SettingsBackupBundle
 import icather.pages.dev.db.ApiConfig
 import icather.pages.dev.db.AppDatabase
 import icather.pages.dev.db.Conversation
@@ -85,13 +87,31 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
         db.apiConfigDao().deleteById(config.id)
     }
 
+    /** 生成全量设置备份 JSON（包含 API 配置 + 所有开关状态） */
+    suspend fun getSettingsBackupJson(): String? = withContext(Dispatchers.IO) {
+        val apiConfigs = db.apiConfigDao().getAllOnce()
+        val bundle = SettingsBackupBundle(
+            version = 1,
+            apiConfigs = apiConfigs,
+            activeApiId = prefs.getLong("active_api_id", DEFAULT_API_ID),
+            imageCompressionEnabled = isImageCompressionEnabled(),
+            identityEnabled = isIdentityEnabled(),
+            memoryEnabled = isMemoryEnabled(),
+            emotionEnabled = isEmotionEnabled(),
+            fallbackEnabled = isFallbackEnabled(),
+            languageSelected = hasSelectedLanguage()
+        )
+        gson.toJson(bundle)
+    }
+
+    /** 旧版兼容：仅获取 API 列表 JSON（局域网同步仍使用此接口） */
     suspend fun getApiConfigsJson(): String? = withContext(Dispatchers.IO) {
         val apiConfigs = db.apiConfigDao().getAllOnce()
         if (apiConfigs.isEmpty()) return@withContext null
         gson.toJson(apiConfigs)
     }
 
-    suspend fun exportApiConfigsToUri(uri: Uri, json: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun exportSettingsToUri(uri: Uri, json: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openOutputStream(uri)?.writer(Charsets.UTF_8)?.use { it.write(json) }
                 ?: throw Exception("Failed to open output stream")
@@ -101,18 +121,52 @@ class SettingsRepository(private val context: Context, private val db: AppDataba
         }
     }
 
-    suspend fun importApiConfigsFromUri(uri: Uri): Result<Int> = withContext(Dispatchers.IO) {
+    suspend fun importSettingsFromUri(uri: Uri): Result<Int> = withContext(Dispatchers.IO) {
         try {
-            val json = context.contentResolver.openInputStream(uri)?.use { 
-                BufferedReader(InputStreamReader(it)).readText() 
+            val json = context.contentResolver.openInputStream(uri)?.use {
+                BufferedReader(InputStreamReader(it)).readText()
             } ?: throw Exception("Failed to read file")
-            importApiConfigsFromJson(json)
+            importSettingsFromJson(json)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    /** 从 JSON 字符串导入 API 配置（局域网同步入口） */
+    /**
+     * 从 JSON 字符串导入设置（兼容新旧格式）。
+     * - JsonArray → 旧版纯 API 列表，仅还原 API 配置。
+     * - JsonObject → 新版 SettingsBackupBundle，还原 API + 所有开关。
+     * 局域网同步入口：importApiConfigsFromJson 保持旧签名不变。
+     */
+    suspend fun importSettingsFromJson(json: String): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            val root = JsonParser.parseString(json.trim())
+            if (root.isJsonArray) {
+                // 旧版格式：纯 API 配置数组
+                importApiConfigsFromJson(json)
+            } else if (root.isJsonObject) {
+                // 新版格式：SettingsBackupBundle
+                val bundle: SettingsBackupBundle = gson.fromJson(json, SettingsBackupBundle::class.java)
+                // 还原 API 配置
+                db.apiConfigDao().insertAll(bundle.apiConfigs.map { it.copy(id = 0) })
+                // 还原开关状态
+                prefs.edit().putLong("active_api_id", bundle.activeApiId).apply()
+                setImageCompressionEnabled(bundle.imageCompressionEnabled)
+                setIdentityEnabled(bundle.identityEnabled)
+                setMemoryEnabled(bundle.memoryEnabled)
+                setEmotionEnabled(bundle.emotionEnabled)
+                setFallbackEnabled(bundle.fallbackEnabled)
+                if (bundle.languageSelected) setLanguageSelected()
+                Result.success(bundle.apiConfigs.size)
+            } else {
+                Result.failure(Exception("Unrecognized backup format"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** 从 JSON 字符串导入 API 配置（局域网同步入口，保持旧签名） */
     suspend fun importApiConfigsFromJson(json: String): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val type = object : TypeToken<List<ApiConfig>>() {}.type

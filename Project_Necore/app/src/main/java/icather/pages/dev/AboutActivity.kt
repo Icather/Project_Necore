@@ -10,17 +10,17 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.view.MenuItem
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import icather.pages.dev.ui.screens.AboutScreen
+import icather.pages.dev.ui.theme.Project_NecoreTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -48,42 +48,38 @@ class AboutActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_about)
-
-        val toolbar: Toolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        val versionTextView: TextView = findViewById(R.id.app_version)
-        try {
-            val packageInfo = packageManager.getPackageInfo(packageName, 0)
-            versionTextView.text = getString(R.string.version_name, packageInfo.versionName)
-        } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
-        }
-
-        val projectHome: TextView = findViewById(R.id.project_home)
-        projectHome.setOnClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Icather/Project_Necore".toUri())
-            startActivity(intent)
-        }
-
-        val openSourceLicenses: TextView = findViewById(R.id.open_source_licenses)
-        openSourceLicenses.setOnClickListener {
-            startActivity(Intent(this, LicenseActivity::class.java))
-        }
-
-        val checkForUpdates: TextView = findViewById(R.id.check_for_updates)
-        checkForUpdates.setOnClickListener {
-            Toast.makeText(this, R.string.checking_for_updates, Toast.LENGTH_SHORT).show()
-            checkForUpdates()
-        }
 
         downloadManager = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), RECEIVER_NOT_EXPORTED)
         } else {
             registerReceiver(onDownloadComplete, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        }
+
+        val versionName = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+        } catch (e: PackageManager.NameNotFoundException) {
+            "?"
+        }
+
+        setContent {
+            Project_NecoreTheme {
+                AboutScreen(
+                    versionName = versionName,
+                    onNavigateBack = { finish() },
+                    onProjectHomeClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Icather/Project_Necore".toUri())
+                        startActivity(intent)
+                    },
+                    onOpenSourceLicensesClick = {
+                        startActivity(Intent(this@AboutActivity, LicenseActivity::class.java))
+                    },
+                    onCheckForUpdatesClick = {
+                        Toast.makeText(this@AboutActivity, R.string.checking_for_updates, Toast.LENGTH_SHORT).show()
+                        checkForUpdates()
+                    }
+                )
+            }
         }
     }
 
@@ -183,17 +179,6 @@ class AboutActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                finish()
-                true
-            }
-
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     // ===== GitHub Releases API 数据模型 =====
 
     private data class GitHubRelease(
@@ -213,4 +198,3 @@ class AboutActivity : AppCompatActivity() {
         private const val RELEASES_API_URL = "https://api.github.com/repos/Icather/Project_Necore/releases/latest"
     }
 }
-

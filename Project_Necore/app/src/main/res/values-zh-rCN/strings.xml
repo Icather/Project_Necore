@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">Necore</string>
 
     <!-- Common -->
@@ -146,8 +146,8 @@
     <string name="about">关于</string>
 
     <!-- Data Management -->
-    <string name="export_api_configs">导出 API 配置</string>
-    <string name="import_api_configs">导入 API 配置</string>
+    <string name="export_api_configs">导出设置与 API</string>
+    <string name="import_api_configs">导入设置与 API</string>
     <string name="export_chat_history">导出聊天记录</string>
     <string name="import_chat_history">导入聊天记录</string>
     <string name="export_all">导出全部</string>
@@ -282,4 +282,9 @@
     <string name="plugin_btn_redownload">重新下载</string>
     <string name="plugin_models_supported">%d 个模型</string>
 
+
+    <string name="search_conversations">搜索对话…</string>
+    <string name="no_results_found">未找到结果</string>
+    <string name="no_chat_history">暂无聊天记录</string>
 </resources>
+

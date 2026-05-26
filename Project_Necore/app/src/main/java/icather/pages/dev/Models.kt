@@ -21,3 +21,15 @@ data class ChatMessage(
 )
 
 data class ChatHistoryBundle(val conversations: List<Conversation>, val messages: List<Message>)
+
+data class SettingsBackupBundle(
+    val version: Int = 1,
+    val apiConfigs: List<icather.pages.dev.db.ApiConfig>,
+    val activeApiId: Long,
+    val imageCompressionEnabled: Boolean,
+    val identityEnabled: Boolean,
+    val memoryEnabled: Boolean,
+    val emotionEnabled: Boolean,
+    val fallbackEnabled: Boolean,
+    val languageSelected: Boolean
+)

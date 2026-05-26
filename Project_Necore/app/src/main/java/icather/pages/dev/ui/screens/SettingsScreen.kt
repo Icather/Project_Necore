@@ -74,7 +74,7 @@ fun SettingsScreen(
                 is SettingsEvent.ShowToast -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
                 }
-                is SettingsEvent.TriggerExportApiConfigs -> {
+                is SettingsEvent.TriggerExportSettings -> {
                     // Handled back in Activity
                 }
                 is SettingsEvent.TriggerExportChatHistory -> {
@@ -245,7 +245,7 @@ fun SettingsScreen(
                         SettingsNavItem(
                             icon = Icons.Filled.Upload,
                             title = stringResource(id = R.string.export_api_configs),
-                            onClick = { viewModel.prepareExportApiConfigs() }
+                            onClick = { viewModel.prepareExportSettings() }
                         )
                         GroupDivider()
                         SettingsNavItem(

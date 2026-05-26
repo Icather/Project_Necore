@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">Necore</string>
     <string name="save">Сохранить</string>
     <string name="cancel">Отмена</string>
@@ -138,8 +138,8 @@
     <string name="language">Язык</string>
     <string name="about">О приложении</string>
 
-    <string name="export_api_configs">Экспорт настроек API</string>
-    <string name="import_api_configs">Импорт настроек API</string>
+    <string name="export_api_configs">Экспорт настроек и API</string>
+    <string name="import_api_configs">Импорт настроек и API</string>
     <string name="export_chat_history">Экспорт истории чатов</string>
     <string name="import_chat_history">Импорт истории чатов</string>
     <string name="export_all">Экспортировать всё</string>
@@ -270,4 +270,9 @@
     <string name="plugin_btn_delete">Удалить</string>
     <string name="plugin_btn_redownload">Скачать заново</string>
     <string name="plugin_models_supported">%d моделей</string>
+
+    <string name="search_conversations">Поиск диалогов…</string>
+    <string name="no_results_found">Ничего не найдено</string>
+    <string name="no_chat_history">Нет истории чатов</string>
 </resources>
+

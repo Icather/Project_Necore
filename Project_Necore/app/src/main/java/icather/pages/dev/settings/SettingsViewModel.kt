@@ -24,7 +24,7 @@ data class SettingsUiState(
 
 sealed class SettingsEvent {
     data class ShowToast(val message: String) : SettingsEvent()
-    data class TriggerExportApiConfigs(val fileName: String) : SettingsEvent()
+    data class TriggerExportSettings(val fileName: String) : SettingsEvent()
     data class TriggerExportChatHistory(val fileName: String) : SettingsEvent()
 }
 
@@ -85,26 +85,26 @@ class SettingsViewModel(
 
     private var jsonToExport: String? = null
 
-    fun prepareExportApiConfigs() {
+    fun prepareExportSettings() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val json = repository.getApiConfigsJson()
+            val json = repository.getSettingsBackupJson()
             if (json == null) {
-                _events.emit(SettingsEvent.ShowToast("没有找到可导出的配置"))
+                _events.emit(SettingsEvent.ShowToast("没有找到可导出的设置"))
             } else {
                 jsonToExport = json
                 val hash = repository.calculateSha256Hash(json).substring(0, 8)
-                _events.emit(SettingsEvent.TriggerExportApiConfigs("配置API_${hash}.json"))
+                _events.emit(SettingsEvent.TriggerExportSettings("设置备份_${hash}.json"))
             }
             _uiState.value = _uiState.value.copy(isLoading = false)
         }
     }
 
-    fun executeExportApiConfigs(uri: Uri) {
+    fun executeExportSettings(uri: Uri) {
         val json = jsonToExport ?: return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val result = repository.exportApiConfigsToUri(uri, json)
+            val result = repository.exportSettingsToUri(uri, json)
             if (result.isSuccess) {
                 _events.emit(SettingsEvent.ShowToast("导出成功"))
             } else {
@@ -115,12 +115,20 @@ class SettingsViewModel(
         }
     }
 
-    fun importApiConfigs(uri: Uri) {
+    fun importSettings(uri: Uri) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val result = repository.importApiConfigsFromUri(uri)
+            val result = repository.importSettingsFromUri(uri)
             if (result.isSuccess) {
-                _events.emit(SettingsEvent.ShowToast("导入成功. 共导入 ${result.getOrNull()} 个配置."))
+                // 导入成功后刷新 UI 状态以反映还原的开关
+                _uiState.value = _uiState.value.copy(
+                    isImageCompressionEnabled = repository.isImageCompressionEnabled(),
+                    isIdentityEnabled = repository.isIdentityEnabled(),
+                    isMemoryEnabled = repository.isMemoryEnabled(),
+                    isEmotionEnabled = repository.isEmotionEnabled(),
+                    isFallbackEnabled = repository.isFallbackEnabled()
+                )
+                _events.emit(SettingsEvent.ShowToast("导入成功. 共还原 ${result.getOrNull()} 个 API 配置及所有设置."))
             } else {
                 _events.emit(SettingsEvent.ShowToast("导入失败: ${result.exceptionOrNull()?.message}"))
             }
